@@ -10,7 +10,12 @@ p.connect(p.DIRECT)
 
 # check the link below for some common environments
 # https://github.com/bulletphysics/bullet3/releases
-env = gym.make('AntBulletEnv-v0')
+env_names = ['AntBulletEnv-v0', 'CartPoleContinuousBulletEnv-v0', 'HumanoidBulletEnv-v0', 'HopperBulletEnv-v0',
+			 'HalfCheetahBulletEnv-v0', 'Walker2DBulletEnv-v0']
+
+env = gym.make(env_names[0])
+# import pybullet_envs.bullet.cartpole_bullet as e
+# env = e.CartPoleBulletEnv(renders=True)
 
 # it is different from how MuJoCo renders environments
 # it doesn't differ too much to me w/ and w/o mode='human'
@@ -24,5 +29,5 @@ for _ in range(10000):
 	time.sleep(1./60.)
 	action = env.action_space.sample()
 	obs, reward, done, _ = env.step(action)
-	if done:
-		break
+	# if done:
+	# 	break
