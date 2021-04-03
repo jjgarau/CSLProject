@@ -32,16 +32,18 @@ def main():
 		env.render()
 
 	# Create logger object
+	# TODO: this only if we're in train mode
 	dt_string = get_datetime_string()
 	dir_name = os.path.join('results', 'simulation_' + dt_string)
 	os.makedirs(dir_name, exist_ok=True)
 	logger = Logger(dir_name, config)
 
 	# Train a model
+	# TODO: eventually send this to a selector
 	ppo(env=env, seed=config.seed, steps_per_epoch=config.steps_per_epoch, epochs=config.epochs, gamma=config.gamma,
 		clip_ratio=config.clip_ratio, pi_lr=config.pi_lr, vf_lr=config.vf_lr, train_pi_iters=config.train_pi_iters,
 		train_v_iters=config.train_v_iters, lam=config.lam, max_ep_len=config.max_ep_len, target_kl=config.target_kl,
-		logger=logger)
+		save_freq=config.save_freq, logger=logger)
 
 
 if __name__ == "__main__":

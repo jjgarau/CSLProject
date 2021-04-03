@@ -19,5 +19,7 @@ class Config:
         self.lam = 0.97
         self.max_ep_len = 1000
         self.target_kl = 0.01
+        self.save_freq= 10
 
-        # TODO: LOGGING CONFIG
+        # Logging hyperparameters
+        self.verbose = True

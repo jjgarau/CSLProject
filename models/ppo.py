@@ -56,6 +56,7 @@ def ppo(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_p
 
     # Prepare logger for run
     logger.set_up_seed_episode_df(seed)
+    logger.log(f'Prepare run with seed {seed}')
 
     # Random seed
     torch.manual_seed(seed)
@@ -70,7 +71,7 @@ def ppo(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_p
 
     # Count variables
     var_counts = tuple(core.count_vars(module) for module in [ac.pi, ac.v])
-    # TODO: Logger var counts?
+    logger.log(f'Number of parameters: \t pi: {var_counts[0]}, \t v: {var_counts[1]}')
 
     # Set up experience buffer
     local_steps_per_epoch = steps_per_epoch
@@ -141,7 +142,12 @@ def ppo(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_p
 
     for epoch in tqdm(range(epochs), desc="Epoch progress"):
 
+        logger.log(f'Starting epoch {epoch}')
+
+        epoch_returns = []
+
         for t in range(local_steps_per_epoch):
+
             a, v, logp = ac.step(torch.as_tensor(o, dtype=torch.float32))
 
             next_o, r, d, _ = env.step(a)
@@ -160,17 +166,22 @@ def ppo(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_p
             epoch_ended = t == local_steps_per_epoch - 1
 
             if terminal or epoch_ended:
-                if epoch_ended and not terminal:
-                    msg = f'Warning: trajectory cut off by epoch at {ep_len} steps'
-                    logger.log(msg)
+
+                if terminal:
+                    epoch_returns.append(ep_ret)
+                    logger.log_episode(ep_ret, ep_len, epoch)
+
+                if epoch_ended:
+                    logger.log_epoch(epoch_returns, epoch)
+                    if not terminal:
+                        logger.log(f'Warning: trajectory cut off by epoch at {ep_len} steps')
+
                 if timeout or epoch_ended:
                     _, v, _ = ac.step(torch.as_tensor(o, dtype=torch.float32))
                 else:
                     v = 0
+
                 buf.finish_path(v)
-                if terminal:
-                    # TODO: logger store ep ret ep len
-                    pass
                 o, ep_ret, ep_len = env.reset(), 0, 0
 
         # Save model
@@ -183,3 +194,4 @@ def ppo(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_p
 
     # TODO: a lot of logging happens here
     logger.save_run()
+    logger.log('\n\n')
