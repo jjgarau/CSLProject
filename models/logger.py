@@ -3,6 +3,9 @@ import pickle
 from collections import OrderedDict
 import pandas as pd
 import numpy as np
+import torch
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 class Logger:
@@ -11,6 +14,7 @@ class Logger:
 
         self.dir_name = dir_name
         self.seed_dir = os.path.join(self.dir_name, 'seeds')
+        self.model_dir = os.path.join(self.dir_name, 'models')
 
         self.config = config
         self.epoch_df = self._set_up_results_log()
@@ -36,6 +40,8 @@ class Logger:
     def save_experiment(self):
         df = pd.DataFrame.from_dict(self.epoch_df)
         df.to_csv(os.path.join(self.dir_name, 'epoch_results.csv'), index=False)
+        if self.config.plot:
+            self.plot_epoch_df()
 
     def log_episode(self, ret, ep_len, epoch):
         self.current_episode_df['Seed'].append(self.current_seed)
@@ -57,9 +63,13 @@ class Logger:
                 message += '\n'
             file.write(message)
 
+    def save_model(self, model, epoch):
+        torch.save(model.state_dict(), os.path.join(self.model_dir, 'model_' + str(epoch) + '.pt'))
+
     def _set_up_results_log(self):
 
         os.makedirs(self.seed_dir, exist_ok=True)
+        os.makedirs(self.model_dir, exist_ok=True)
 
         column_names = ['Seed', 'Epoch', 'Mean return']
         df = {name: [] for name in column_names}
@@ -75,3 +85,7 @@ class Logger:
         with open(os.path.join(self.dir_name, 'config.txt'), 'w') as file:
             for k, v in config_dict.items():
                 file.write(str(k) + ': ' + str(v) + '\n')
+
+    def plot_epoch_df(self):
+        # TODO:
+        pass

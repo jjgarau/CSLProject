@@ -172,6 +172,8 @@ def ppo(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_p
                     logger.log_episode(ep_ret, ep_len, epoch)
 
                 if epoch_ended:
+                    if len(epoch_returns) == 0:
+                        epoch_returns.append(ep_ret)
                     logger.log_epoch(epoch_returns, epoch)
                     if not terminal:
                         logger.log(f'Warning: trajectory cut off by epoch at {ep_len} steps')
@@ -186,8 +188,7 @@ def ppo(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_p
 
         # Save model
         if (epoch % save_freq == 0) or (epoch == epochs - 1):
-            # TODO: SAVE MODEL
-            pass
+            logger.save_model(ac, epoch)
 
         # Perform PPO update!
         update()

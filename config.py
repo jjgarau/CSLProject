@@ -23,3 +23,4 @@ class Config:
 
         # Logging hyperparameters
         self.verbose = True
+        self.plot = True
