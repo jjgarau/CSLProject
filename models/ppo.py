@@ -50,9 +50,9 @@ class PPOBuffer:
         return {k: torch.as_tensor(v, dtype=torch.float32) for k, v in data.items()}
 
 
-def ppo(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99,
-        clip_ratio=0.2, pi_lr=3e-4, vf_lr=1e-3, train_pi_iters=80, train_v_iters=80, lam=0.97, max_ep_len=1000,
-        target_kl=0.01, save_freq=10, logger=None):
+def ppo_train(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_per_epoch=4000, epochs=50,
+              gamma=0.99, clip_ratio=0.2, pi_lr=3e-4, vf_lr=1e-3, train_pi_iters=80, train_v_iters=80, lam=0.97,
+              max_ep_len=1000, target_kl=0.01, save_freq=10, logger=None):
 
     # Prepare logger for run
     logger.set_up_seed_episode_df(seed)
@@ -136,7 +136,7 @@ def ppo(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_p
         kl, ent, cf = pi_info['kl'], pi_info_old['ent'], pi_info['cf']
         # TODO: a lot of logging happens here
 
-        # Prepare for interaction with environment
+    # Prepare for interaction with environment
     start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
 
@@ -196,3 +196,51 @@ def ppo(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_p
     # TODO: a lot of logging happens here
     logger.save_run()
     logger.log('\n\n')
+
+
+def ppo_eval(env, model_path, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_per_epoch=4000,
+             epochs=50, max_ep_len=1000):
+
+    # Random seed
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+
+    # Instantiate environment
+    obs_dim = env.observation_space.shape
+    act_dim = env.action_space.shape
+
+    # Create actor-critic module
+    ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
+    ac.load_state_dict(torch.load(model_path))
+
+    # Prepare for interaction with the environment
+    local_steps_per_epoch = steps_per_epoch
+
+    start_time = time.time()
+    o, ep_ret, ep_len = env.reset(), 0, 0
+
+    for epoch in tqdm(range(epochs), desc="Epoch progress"):
+
+        for t in range(local_steps_per_epoch):
+
+            a, v, logp = ac.step(torch.as_tensor(o, dtype=torch.float32))
+
+            next_o, r, d, _ = env.step(a)
+            ep_ret += r
+            ep_len += 1
+
+            # Update obs (critical!)
+            o = next_o
+
+            timeout = ep_len == max_ep_len
+            terminal = d or timeout
+            epoch_ended = t == local_steps_per_epoch - 1
+
+            if terminal or epoch_ended:
+
+                if terminal:
+                    print(f'Episode return: {ep_ret}')
+                if epoch_ended and not terminal:
+                    print(f'Warning: trajectory cut off by epoch at {ep_len} steps')
+
+                o, ep_ret, ep_len = env.reset(), 0, 0

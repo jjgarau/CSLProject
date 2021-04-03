@@ -1,13 +1,16 @@
-class Config:
+class DefaultConfig:
 
     def __init__(self):
 
         # Environment hyperparameters
         self.env_name = 'AntBulletEnv-v0'
         self.seed = 0
-        self.render = False
+        self.render = True
+        self.eval_mode = True
+        self.eval_model = 'test.pt'
 
         # Algorithm hyperparameters
+        self.algorithm = 'ppo'
         self.steps_per_epoch = 4000
         self.epochs = 50
         self.gamma = 0.99
@@ -24,3 +27,13 @@ class Config:
         # Logging hyperparameters
         self.verbose = True
         self.plot = True
+        self.rolling = 20
+
+
+class Config(DefaultConfig):
+
+    def __init__(self):
+        super().__init__()
+
+        self.epochs = 501
+        self.save_freq = 25

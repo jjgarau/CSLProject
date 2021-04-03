@@ -32,10 +32,14 @@ class Logger:
         self.current_episode_df['Episode'] = list(range(len(self.current_episode_df['Return'])))
         self.current_episode_df['Mean reward'] = [ret / l for (ret, l) in zip(self.current_episode_df['Return'],
                                                                               self.current_episode_df['Length'])]
-        df = pd.DataFrame.from_dict(self.current_episode_df)
-        self.seed_episode_dfs[self.current_seed] = df
-        df.to_csv(os.path.join(self.seed_dir, str(self.current_seed) + '.csv'), index=False)
+        self.current_episode_df = pd.DataFrame.from_dict(self.current_episode_df)
+        self.current_episode_df['Smooth return'] = self.current_episode_df['Return'].rolling(self.config.rolling,
+                                                                                             min_periods=1).mean()
+        self.seed_episode_dfs[self.current_seed] = self.current_episode_df
+        self.current_episode_df.to_csv(os.path.join(self.seed_dir, str(self.current_seed) + '.csv'), index=False)
         self.save_experiment()
+        if self.config.plot:
+            self.plot_episode_df()
 
     def save_experiment(self):
         df = pd.DataFrame.from_dict(self.epoch_df)
@@ -86,6 +90,16 @@ class Logger:
             for k, v in config_dict.items():
                 file.write(str(k) + ': ' + str(v) + '\n')
 
+    def plot_episode_df(self):
+        ax = sns.lineplot(x='Episode', y='Smooth return', data=self.current_episode_df)
+        ax.grid(color='#c7c7c7', linestyle='--', linewidth=1)
+        path = os.path.join(self.seed_dir, str(self.current_seed) + '.pdf')
+        plt.savefig(path, bbox_inches='tight')
+        plt.close()
+
     def plot_epoch_df(self):
-        # TODO:
-        pass
+        ax = sns.lineplot(x='Epoch', y='Mean return', data=self.epoch_df)
+        ax.grid(color='#c7c7c7', linestyle='--', linewidth=1)
+        path = os.path.join(self.dir_name, 'epoch_returns.pdf')
+        plt.savefig(path, bbox_inches='tight')
+        plt.close()
