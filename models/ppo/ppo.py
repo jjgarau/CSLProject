@@ -3,7 +3,7 @@ import torch
 from torch.optim import Adam
 from tqdm import tqdm
 import time
-import models.core as core
+import models.ppo.core as core
 
 
 class PPOBuffer:
@@ -61,6 +61,7 @@ def ppo_train(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, s
     # Random seed
     torch.manual_seed(seed)
     np.random.seed(seed)
+    env.seed(seed)
 
     # Instantiate environment
     obs_dim = env.observation_space.shape
@@ -206,13 +207,10 @@ def ppo_eval(env, model_path, actor_critic=core.MLPActorCritic, ac_kwargs=dict()
     np.random.seed(seed)
     env.seed(seed)
 
-    # Instantiate environment
-    obs_dim = env.observation_space.shape
-    act_dim = env.action_space.shape
-
     # Create actor-critic module
     ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
     ac.load_state_dict(torch.load(model_path))
+    ac.eval()
 
     # Prepare for interaction with the environment
     local_steps_per_epoch = steps_per_epoch

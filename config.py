@@ -15,15 +15,28 @@ class DefaultConfig:
         self.steps_per_epoch = 4000
         self.epochs = 51
         self.gamma = 0.99
+        self.max_ep_len = 1000
+        self.save_freq = 10
+
+        # PPO hyperparameters
         self.clip_ratio = 0.2
         self.pi_lr = 3e-4
         self.vf_lr = 1e-3
         self.train_pi_iters = 80
         self.train_v_iters = 80
         self.lam = 0.97
-        self.max_ep_len = 1000
         self.target_kl = 0.01
-        self.save_freq= 10
+
+        # SAC hyperparameters
+        self.replay_size = int(1e6)
+        self.polyak = 0.995
+        self.lr = 1e-3
+        self.alpha = 0.2
+        self.batch_size = 100
+        self.start_steps = 10000
+        self.update_after = 1000
+        self.update_every = 50
+        self.num_test_episodes = 10
 
         # Logging hyperparameters
         self.verbose = True

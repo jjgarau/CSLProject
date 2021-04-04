@@ -1,6 +1,6 @@
 import os
 
-from models.ppo import ppo_train, ppo_eval
+from models.ppo.ppo import ppo_train, ppo_eval
 
 
 class RunSelector:
@@ -42,6 +42,14 @@ class RunSelector:
                                          train_v_iters=config.train_v_iters, lam=config.lam,
                                          max_ep_len=config.max_ep_len, target_kl=config.target_kl,
                                          save_freq=config.save_freq, logger=logger)
+
+        elif config.algorithm == 'SAC':
+
+            if config.eval_mode:
+                pass
+            else:
+                pass
+
         else:
             raise NotImplementedError
 
