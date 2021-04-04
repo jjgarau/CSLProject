@@ -12,13 +12,24 @@ class RunSelector:
     def run(self, env, logger=None, config=None):
 
         config = self.config if config is None else config
-        #TODO 
+
+        seed = config.seed
+        if isinstance(seed, float):
+            seed = int(seed)
+        if isinstance(seed, int):
+            seed = [seed]
+        assert type(seed) is list
+
+        runner = self.select_algorithm(env, logger, config)
+
+        for s in seed:
+            runner(s)
 
     def select_algorithm(self, env, logger, config=None):
 
         config = self.config if config is None else config
 
-        if config.algorithm == 'ppo':
+        if config.algorithm == 'PPO':
 
             if config.eval_mode:
                 model_path = os.path.join('eval', config.eval_model)

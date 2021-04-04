@@ -8,6 +8,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
+common_column_names = ['Seed', 'Epoch', 'Algorithm', 'Env type']
+
+
 class Logger:
 
     def __init__(self, dir_name, config=None):
@@ -24,7 +27,7 @@ class Logger:
         self._save_config()
 
     def set_up_seed_episode_df(self, seed):
-        column_names = ['Seed', 'Epoch', 'Return', 'Length']
+        column_names = common_column_names + ['Return', 'Length']
         self.current_seed = int(seed)
         self.current_episode_df = {name: [] for name in column_names}
 
@@ -52,12 +55,16 @@ class Logger:
         self.current_episode_df['Epoch'].append(epoch)
         self.current_episode_df['Return'].append(ret)
         self.current_episode_df['Length'].append(ep_len)
+        self.current_episode_df['Algorithm'].append(self.config.algorithm)
+        self.current_episode_df['Env type'].append(self.config.env_type)
 
     def log_epoch(self, epoch_returns, epoch):
         self.epoch_df['Seed'].append(self.current_seed)
         self.epoch_df['Epoch'].append(epoch)
         mean_ret = np.mean(epoch_returns) if len(epoch_returns) > 0 else 0.0
         self.epoch_df['Mean return'].append(mean_ret)
+        self.epoch_df['Algorithm'].append(self.config.algorithm)
+        self.epoch_df['Env type'].append(self.config.env_type)
 
     def log(self, message, add_end_line=True):
         if self.config.verbose:
@@ -75,7 +82,7 @@ class Logger:
         os.makedirs(self.seed_dir, exist_ok=True)
         os.makedirs(self.model_dir, exist_ok=True)
 
-        column_names = ['Seed', 'Epoch', 'Mean return']
+        column_names = common_column_names + ['Mean return']
         df = {name: [] for name in column_names}
         return df
 
@@ -98,7 +105,7 @@ class Logger:
         plt.close()
 
     def plot_epoch_df(self):
-        ax = sns.lineplot(x='Epoch', y='Mean return', data=self.epoch_df)
+        ax = sns.lineplot(x='Epoch', y='Mean return', data=self.epoch_df, ci=self.config.ci)
         ax.grid(color='#c7c7c7', linestyle='--', linewidth=1)
         path = os.path.join(self.dir_name, 'epoch_returns.pdf')
         plt.savefig(path, bbox_inches='tight')

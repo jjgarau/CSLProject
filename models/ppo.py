@@ -204,6 +204,7 @@ def ppo_eval(env, model_path, actor_critic=core.MLPActorCritic, ac_kwargs=dict()
     # Random seed
     torch.manual_seed(seed)
     np.random.seed(seed)
+    env.seed(seed)
 
     # Instantiate environment
     obs_dim = env.observation_space.shape

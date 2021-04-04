@@ -5,14 +5,15 @@ class DefaultConfig:
         # Environment hyperparameters
         self.env_name = 'AntBulletEnv-v0'
         self.seed = 0
-        self.render = True
-        self.eval_mode = True
+        self.render = False
+        self.eval_mode = False
         self.eval_model = 'test.pt'
+        self.env_type = 'Baseline'
 
         # Algorithm hyperparameters
-        self.algorithm = 'ppo'
+        self.algorithm = 'PPO'
         self.steps_per_epoch = 4000
-        self.epochs = 50
+        self.epochs = 51
         self.gamma = 0.99
         self.clip_ratio = 0.2
         self.pi_lr = 3e-4
@@ -28,6 +29,7 @@ class DefaultConfig:
         self.verbose = True
         self.plot = True
         self.rolling = 20
+        self.ci = 'sd'
 
 
 class Config(DefaultConfig):
@@ -35,5 +37,5 @@ class Config(DefaultConfig):
     def __init__(self):
         super().__init__()
 
-        self.epochs = 501
-        self.save_freq = 25
+        self.seed = [0, 45, 23, 123, 34235]
+        self.ci = 95
