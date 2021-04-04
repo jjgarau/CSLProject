@@ -106,4 +106,122 @@ def sac_train(env, test_env=None, actor_critic=core.MLPActorCritic, ac_kwargs=di
 
     # Set up function for computing SAC pi loss
     def compute_loss_pi(data):
-        pass
+        o = data['obs']
+        pi, logp_pi = ac.pi(o)
+        q1_pi = ac.q1(o, pi)
+        q2_pi = ac.q2(o, pi)
+        q_pi = torch.min(q1_pi, q2_pi)
+
+        # Entropy-regularized policy loss
+        loss_pi = (alpha * logp_pi - q_pi).mean()
+
+        # Useful info for logging
+        pi_info = dict(LogPi=logp_pi.detach().numpy())
+
+        return loss_pi, pi_info
+
+    # Set up optimizers for policy and q-function
+    pi_optimizer = Adam(ac.pi.parameters(), lr=lr)
+    q_optimizer = Adam(q_params, lr=lr)
+
+    def update(data):
+        # First run one gradient descent step for Q1 and Q2
+        q_optimizer.zero_grad()
+        loss_q, q_info = compute_loss_q(data)
+        loss_q.backward()
+        q_optimizer.step()
+
+        # TODO: logging happens here
+
+        # Freeze Q-networks so you don't waste computational effort computing gradients
+        # for them during the policy learning step
+        for p in q_params:
+            p.requires_grad = False
+
+        # Next run one gradient descent step for pi
+        pi_optimizer.zero_grad()
+        loss_pi, pi_info = compute_loss_pi(data)
+        loss_pi.backward()
+        pi_optimizer.step()
+
+        # Unfreeze Q-networks so you can optimize it at next DDPG step.
+        for p in q_params:
+            p.requires_grad = True
+
+        # TODO: logging happens here
+
+        # Finally, update target networks by polyak averaging
+        with torch.no_grad():
+            for p, p_targ in zip(ac.parameters(), ac_targ.parameters()):
+                # We use in-place operations "mul_", "add_" to update target
+                # params, as opposed to "mul" and "add", which would make new tensors
+                p_targ.data.mul_(polyak)
+                p_targ.data.add_((1 - polyak) * p.data)
+
+    def get_action(o, deterministic=False):
+        return ac.act(torch.as_tensor(o, dtype=torch.float32), deterministic)
+
+    def test_agent():
+        for j in range(num_test_episodes):
+            o, d, ep_ret, ep_len = test_env.reset(), False, 0, 0
+            while not (d or (ep_len == max_ep_len)):
+                # Take deterministic actions at test time
+                a = get_action(o, True)
+                o, r, d, _ = test_env.step(a)
+                ep_ret += r
+                ep_len += 1
+            # TODO: LOG EPISODE ON LOGGER
+
+    # Prepare for interaction with environment
+    total_steps = steps_per_epoch * epochs
+    start_time = time.time()
+    o, ep_ret, ep_len = env.reset(), 0, 0
+
+    # Main loop: collect experience in env and update/log each epoch
+    for t in range(total_steps):
+
+        # Until start_steps have elapsed, randomly sample actions from a uniform distribution
+        # for better exploration. Afterwards, use the learned policy
+        a = get_action(0) if t > start_steps else env.action_space.sample()
+
+        # Step the env
+        o2, r, d, _ = env.step(a)
+        ep_ret += 1
+        ep_len += 1
+
+        # Ignore the "done" signal if it comes from hitting the time horizon
+        d = False if ep_len == max_ep_len else d
+
+        # Store experience to replay buffer
+        replay_buffer.store(o, a, r, o2, d)
+
+        # Update observation
+        o = o2
+
+        # End of trajectory handling
+        if d or ep_len == max_ep_len:
+            # TODO: LOG EPISODE ON LOGGER?
+            o, ep_ret, ep_len = env.reset(), 0, 0
+
+        # Update handling
+        if t >= update_after and t % update_every == 0:
+            for j in range(update_every):
+                batch = replay_buffer.sample_batch(batch_size)
+                update(data=batch)
+
+        # End of epoch handling
+        if (t+1) % steps_per_epoch == 0:
+            epoch = (t+1) // steps_per_epoch
+
+            # Save model
+            if epoch % save_freq == 0 or epoch == epochs:
+                logger.save_model(ac, epoch)
+
+            # TODO: Test the performance of the deterministic version of the agent?????
+            test_agent()
+
+            # TODO: A lot of logging happens here
+
+
+def sac_eval():
+    pass

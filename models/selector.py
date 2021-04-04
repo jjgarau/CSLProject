@@ -1,6 +1,7 @@
 import os
 
 from models.ppo.ppo import ppo_train, ppo_eval
+from models.sac.sac import sac_train, sac_eval
 
 
 class RunSelector:
