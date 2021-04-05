@@ -56,7 +56,6 @@ def sac_train(env, test_env=None, actor_critic=core.MLPActorCritic, ac_kwargs=di
         test_env = deepcopy(env)
     obs_dim = env.observation_space.shape
     act_dim = env.action_space.shape[0]
-    act_limit = env.action_space.high[0]
 
     # Create actor-critic module and target networks
     ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
@@ -162,6 +161,7 @@ def sac_train(env, test_env=None, actor_critic=core.MLPActorCritic, ac_kwargs=di
         return ac.act(torch.as_tensor(o, dtype=torch.float32), deterministic)
 
     def test_agent():
+        epoch_returns = []
         for j in range(num_test_episodes):
             o, d, ep_ret, ep_len = test_env.reset(), False, 0, 0
             while not (d or (ep_len == max_ep_len)):
@@ -170,19 +170,24 @@ def sac_train(env, test_env=None, actor_critic=core.MLPActorCritic, ac_kwargs=di
                 o, r, d, _ = test_env.step(a)
                 ep_ret += r
                 ep_len += 1
-            # TODO: LOG EPISODE ON LOGGER
+            epoch_returns.append(ep_ret)
+        logger.log_epoch(epoch_returns, epoch)
 
     # Prepare for interaction with environment
     total_steps = steps_per_epoch * epochs
     start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
 
+    logger.log(f'Starting epoch 0')
+
     # Main loop: collect experience in env and update/log each epoch
     for t in range(total_steps):
 
+        epoch = t // steps_per_epoch
+
         # Until start_steps have elapsed, randomly sample actions from a uniform distribution
         # for better exploration. Afterwards, use the learned policy
-        a = get_action(0) if t > start_steps else env.action_space.sample()
+        a = get_action(o) if t > start_steps else env.action_space.sample()
 
         # Step the env
         o2, r, d, _ = env.step(a)
@@ -200,7 +205,7 @@ def sac_train(env, test_env=None, actor_critic=core.MLPActorCritic, ac_kwargs=di
 
         # End of trajectory handling
         if d or ep_len == max_ep_len:
-            # TODO: LOG EPISODE ON LOGGER?
+            logger.log_episode(ep_ret, ep_len, epoch)
             o, ep_ret, ep_len = env.reset(), 0, 0
 
         # Update handling
@@ -211,17 +216,58 @@ def sac_train(env, test_env=None, actor_critic=core.MLPActorCritic, ac_kwargs=di
 
         # End of epoch handling
         if (t+1) % steps_per_epoch == 0:
-            epoch = (t+1) // steps_per_epoch
 
             # Save model
             if epoch % save_freq == 0 or epoch == epochs:
                 logger.save_model(ac, epoch)
 
-            # TODO: Test the performance of the deterministic version of the agent?????
             test_agent()
+
+            logger.log(f'Starting epoch {epoch + 1}')
 
             # TODO: A lot of logging happens here
 
+    logger.save_run()
+    logger.log('\n\n')
 
-def sac_eval():
-    pass
+
+def sac_eval(env, model_path, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_per_epoch=4000,
+             epochs=100, max_ep_len=1000):
+
+    # Random seed
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    env.seed(seed)
+
+    # Create actor-critic module and target networks
+    ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
+    ac.load_state_dict(torch.load(model_path))
+    ac.eval()
+
+    def get_action(o, deterministic=False):
+        return ac.act(torch.as_tensor(o, dtype=torch.float32), deterministic)
+
+    # Prepare for interaction with environment
+    total_steps = steps_per_epoch * epochs
+    start_time = time.time()
+    o, ep_ret, ep_len = env.reset(), 0, 0
+
+    # Main loop
+    for t in range(total_steps):
+
+        epoch = t // steps_per_epoch
+
+        # Get action deterministically
+        a = get_action(o, True)
+
+        # Step the env
+        o2, r, d, _ = env.step(a)
+        ep_ret += 1
+        ep_len += 1
+
+        # Update observation
+        o = o2
+
+        # End of trajectory handling
+        if d or ep_len == max_ep_len:
+            o, ep_ret, ep_len = env.reset(), 0, 0

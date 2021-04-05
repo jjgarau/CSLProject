@@ -47,9 +47,17 @@ class RunSelector:
         elif config.algorithm == 'SAC':
 
             if config.eval_mode:
-                pass
+                model_path = os.path.join('eval', config.eval_model)
+                def runner(x): sac_eval(env=env, model_path=model_path, seed=x, steps_per_epoch=config.steps_per_epoch,
+                                        epochs=config.epochs, max_ep_len=config.max_ep_len)
             else:
-                pass
+                def runner(x): sac_train(env=env, test_env=None, seed=x, steps_per_epoch=config.steps_per_epoch,
+                                         epochs=config.epochs, replay_size=config.replay_size, gamma=config.gamma,
+                                         polyak=config.polyak, lr=config.lr, alpha=config.alpha,
+                                         batch_size=config.batch_size, start_steps=config.start_steps,
+                                         update_after=config.update_after, update_every=config.update_every,
+                                         num_test_episodes=config.num_test_episodes, max_ep_len=config.max_ep_len,
+                                         save_freq=config.save_freq, logger=logger)
 
         else:
             raise NotImplementedError

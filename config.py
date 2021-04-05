@@ -35,8 +35,8 @@ class DefaultConfig:
         self.batch_size = 100
         self.start_steps = 10000
         self.update_after = 1000
-        self.update_every = 50
-        self.num_test_episodes = 10
+        self.update_every = 20
+        self.num_test_episodes = 4
 
         # Logging hyperparameters
         self.verbose = True
@@ -49,6 +49,3 @@ class Config(DefaultConfig):
 
     def __init__(self):
         super().__init__()
-
-        self.seed = [0, 45, 23, 123, 34235]
-        self.ci = 95
