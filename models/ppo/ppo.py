@@ -145,8 +145,6 @@ def ppo_train(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, s
 
         logger.log(f'Starting epoch {epoch}')
 
-        epoch_returns = []
-
         for t in range(local_steps_per_epoch):
 
             a, v, logp = ac.step(torch.as_tensor(o, dtype=torch.float32))
@@ -169,13 +167,10 @@ def ppo_train(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, s
             if terminal or epoch_ended:
 
                 if terminal:
-                    epoch_returns.append(ep_ret)
-                    logger.log_episode(ep_ret, ep_len, epoch)
+                    logger.log_episode(ep_ret, ep_len, epoch, env)
 
                 if epoch_ended:
-                    if len(epoch_returns) == 0:
-                        epoch_returns.append(ep_ret)
-                    logger.log_epoch(epoch_returns, epoch)
+                    logger.log_epoch(epoch)
                     if not terminal:
                         logger.log(f'Warning: trajectory cut off by epoch at {ep_len} steps')
 

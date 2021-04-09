@@ -1,9 +1,8 @@
 import os
-import time
 from datetime import datetime
 import gym
-import pybullet_envs
 import pybullet as p
+from environments.env_maker import make_env
 
 from config import Config
 from models.selector import RunSelector
@@ -28,7 +27,7 @@ def main():
 	p.connect(p.DIRECT)
 
 	# Create environment
-	env = gym.make(config.env_name)
+	env = make_env(config)
 
 	# Render
 	if config.render:

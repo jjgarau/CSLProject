@@ -49,3 +49,5 @@ class Config(DefaultConfig):
 
     def __init__(self):
         super().__init__()
+
+        self.env_name = 'JerkAnt'
