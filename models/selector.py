@@ -2,7 +2,8 @@ import os
 
 from models.ppo.ppo import ppo_train, ppo_eval
 from models.sac.sac import sac_train, sac_eval
-from models.policies import BaselinePolicy
+from models.policies import BaselinePolicy, PreviousActionPolicy, ActionDifferencePolicy, RollingAveragePolicy,\
+    RecurrentPolicy
 
 
 class RunSelector:
@@ -74,7 +75,7 @@ class RunSelector:
 
         config = self.config if config is None else config
 
-        if config.env_type == 'Baseline':
+        if config.policy == 'Baseline':
             return BaselinePolicy(env.observation_space, env.action_space)
         else:
             raise NotImplementedError

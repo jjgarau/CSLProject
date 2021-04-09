@@ -8,7 +8,7 @@ class DefaultConfig:
         self.render = False
         self.eval_mode = False
         self.eval_model = 'test.pt'
-        self.env_type = 'Baseline'
+        self.policy = 'Baseline'
 
         # Algorithm hyperparameters
         self.algorithm = 'PPO'

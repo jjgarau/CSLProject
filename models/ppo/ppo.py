@@ -55,7 +55,7 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
               save_freq=10, logger=None):
 
     # Prepare logger for run
-    logger.set_up_seed_episode_df(seed)
+    logger.set_up_seed_episode_df(policy, seed)
     logger.log(f'Prepare run with seed {seed}')
 
     # Random seed

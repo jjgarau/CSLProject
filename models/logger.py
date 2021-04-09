@@ -8,7 +8,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
-common_column_names = ['Seed', 'Epoch', 'Algorithm', 'Env type']
+common_column_names = ['Seed', 'Epoch', 'Algorithm', 'Policy']
 
 
 class Logger:
@@ -22,15 +22,16 @@ class Logger:
         self.config = config
         self.epoch_df = self._set_up_results_log()
         self.seed_episode_dfs = {}
-        self.current_episode_df, self.current_seed = None, None
+        self.current_episode_df, self.current_seed, self.current_policy = None, None, None
 
         self.epoch_returns = []
         self.epoch_jerks = []
 
         self._save_config()
 
-    def set_up_seed_episode_df(self, seed):
+    def set_up_seed_episode_df(self, policy, seed):
         column_names = common_column_names + ['Return', 'Jerk body', 'Jerk joints', 'Length']
+        self.current_policy = policy.get_name()
         self.current_seed = int(seed)
         self.current_episode_df = {name: [] for name in column_names}
 
@@ -71,7 +72,7 @@ class Logger:
         self.current_episode_df['Jerk joints'].append(jerk_joints)
         self.current_episode_df['Length'].append(ep_len)
         self.current_episode_df['Algorithm'].append(self.config.algorithm)
-        self.current_episode_df['Env type'].append(self.config.env_type)
+        self.current_episode_df['Policy'].append(self.current_policy)
 
         self.epoch_returns.append(ret)
         self.epoch_jerks.append((jerk_body, jerk_joints))
@@ -90,7 +91,7 @@ class Logger:
         self.epoch_df['Mean jerk body'].append(mean_jerk_body)
         self.epoch_df['Mean jerk joints'].append(mean_jerk_joints)
         self.epoch_df['Algorithm'].append(self.config.algorithm)
-        self.epoch_df['Env type'].append(self.config.env_type)
+        self.epoch_df['Policy'].append(self.current_policy)
 
     def log(self, message, add_end_line=True):
         if self.config.verbose:
