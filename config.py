@@ -51,4 +51,3 @@ class Config(DefaultConfig):
         super().__init__()
 
         self.env_name = 'JerkAnt'
-        self.seed = [0, 1, 10, 100, 1000]

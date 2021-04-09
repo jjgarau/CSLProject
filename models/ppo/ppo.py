@@ -50,9 +50,9 @@ class PPOBuffer:
         return {k: torch.as_tensor(v, dtype=torch.float32) for k, v in data.items()}
 
 
-def ppo_train(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_per_epoch=4000, epochs=50,
-              gamma=0.99, clip_ratio=0.2, pi_lr=3e-4, vf_lr=1e-3, train_pi_iters=80, train_v_iters=80, lam=0.97,
-              max_ep_len=1000, target_kl=0.01, save_freq=10, logger=None):
+def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, clip_ratio=0.2, pi_lr=3e-4,
+              vf_lr=1e-3, train_pi_iters=80, train_v_iters=80, lam=0.97, max_ep_len=1000, target_kl=0.01,
+              save_freq=10, logger=None):
 
     # Prepare logger for run
     logger.set_up_seed_episode_df(seed)
@@ -67,11 +67,8 @@ def ppo_train(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, s
     obs_dim = env.observation_space.shape
     act_dim = env.action_space.shape
 
-    # Create actor-critic module
-    ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
-
     # Count variables
-    var_counts = tuple(core.count_vars(module) for module in [ac.pi, ac.v])
+    var_counts = tuple(core.count_vars(module) for module in [policy.get_pi(), policy.get_v()])
     logger.log(f'Number of parameters: \t pi: {var_counts[0]}, \t v: {var_counts[1]}')
 
     # Set up experience buffer
@@ -83,7 +80,7 @@ def ppo_train(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, s
         obs, act, adv, logp_old = data['obs'], data['act'], data['adv'], data['logp']
 
         # Policy loss
-        pi, logp = ac.pi(obs, act)
+        pi, logp = policy.pi(obs, act)
         ratio = torch.exp(logp - logp_old)
         clip_adv = torch.clamp(ratio, 1 - clip_ratio, 1 + clip_ratio) * adv
         loss_pi = - (torch.min(ratio * adv, clip_adv)).mean()
@@ -100,11 +97,11 @@ def ppo_train(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, s
     # Set up function for computing value loss
     def compute_loss_v(data):
         obs, ret = data['obs'], data['ret']
-        return ((ac.v(obs) - ret) ** 2).mean()
+        return ((policy.v(obs) - ret) ** 2).mean()
 
     # Set up optimizers for policy and value function
-    pi_optimizer = Adam(ac.pi.parameters(), lr=pi_lr)
-    vf_optimizer = Adam(ac.v.parameters(), lr=vf_lr)
+    pi_optimizer = Adam(policy.pi_params(), lr=pi_lr)
+    vf_optimizer = Adam(policy.v_params(), lr=vf_lr)
 
     # TODO: Logger set up model saving
 
@@ -147,7 +144,7 @@ def ppo_train(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, s
 
         for t in range(local_steps_per_epoch):
 
-            a, v, logp = ac.step(torch.as_tensor(o, dtype=torch.float32))
+            a, v, logp = policy.step(torch.as_tensor(o, dtype=torch.float32))
 
             next_o, r, d, _ = env.step(a)
             ep_ret += r
@@ -175,7 +172,7 @@ def ppo_train(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, s
                         logger.log(f'Warning: trajectory cut off by epoch at {ep_len} steps')
 
                 if timeout or epoch_ended:
-                    _, v, _ = ac.step(torch.as_tensor(o, dtype=torch.float32))
+                    _, v, _ = policy.step(torch.as_tensor(o, dtype=torch.float32))
                 else:
                     v = 0
 
@@ -184,7 +181,7 @@ def ppo_train(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, s
 
         # Save model
         if (epoch % save_freq == 0) or (epoch == epochs - 1):
-            logger.save_model(ac, epoch)
+            logger.save_model(policy.get_model(), epoch)
 
         # Perform PPO update!
         update()
@@ -194,8 +191,7 @@ def ppo_train(env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, s
     logger.log('\n\n')
 
 
-def ppo_eval(env, model_path, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0, steps_per_epoch=4000,
-             epochs=50, max_ep_len=1000):
+def ppo_eval(env, model_path, policy, seed=0, steps_per_epoch=4000, epochs=50, max_ep_len=1000):
 
     # Random seed
     torch.manual_seed(seed)
@@ -203,9 +199,7 @@ def ppo_eval(env, model_path, actor_critic=core.MLPActorCritic, ac_kwargs=dict()
     env.seed(seed)
 
     # Create actor-critic module
-    ac = actor_critic(env.observation_space, env.action_space, **ac_kwargs)
-    ac.load_state_dict(torch.load(model_path))
-    ac.eval()
+    policy.load_model(model_path)
 
     # Prepare for interaction with the environment
     local_steps_per_epoch = steps_per_epoch
@@ -217,7 +211,7 @@ def ppo_eval(env, model_path, actor_critic=core.MLPActorCritic, ac_kwargs=dict()
 
         for t in range(local_steps_per_epoch):
 
-            a, v, logp = ac.step(torch.as_tensor(o, dtype=torch.float32))
+            a, v, logp = policy.step(torch.as_tensor(o, dtype=torch.float32))
 
             next_o, r, d, _ = env.step(a)
             ep_ret += r
