@@ -1,8 +1,6 @@
 import os
 from datetime import datetime
-import gym
 import pybullet as p
-from environments.env_maker import make_env
 
 from config import Config
 from models.selector import RunSelector
@@ -26,13 +24,6 @@ def main():
 	# Connect to PyBullet
 	p.connect(p.DIRECT)
 
-	# Create environment
-	env = make_env(config)
-
-	# Render
-	if config.render:
-		env.render()
-
 	# Create logger object
 	if not config.eval_mode:
 		dt_string = get_datetime_string()
@@ -44,7 +35,7 @@ def main():
 
 	# Train a model
 	selector = RunSelector(config)
-	selector.run(env=env, config=config, logger=logger)
+	selector.run(config=config, logger=logger)
 
 
 if __name__ == "__main__":

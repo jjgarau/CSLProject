@@ -37,6 +37,9 @@ class Policy:
     def load_model(self, model_path):
         raise NotImplementedError
 
+    def new_episode(self):
+        pass
+
 
 class BaselinePolicy(Policy):
 
@@ -75,40 +78,26 @@ class BaselinePolicy(Policy):
         self.ac.eval()
 
 
-class PreviousActionPolicy(Policy):
+class MovingAveragePolicy(BaselinePolicy):
 
-    def __init__(self):
-        pass
+    def __init__(self, observation_space, action_space, window_size=10, hidden_sizes=(64, 64), activation=nn.Tanh):
+        super().__init__(observation_space, action_space, hidden_sizes, activation)
+        self.window_size = window_size
+        self.action_log = []
 
     def get_name(self):
-        return "Previous action"
-
-    def pi(self, obs, act):
-        pass
-
-    def v(self, obs):
-        pass
-
-    def pi_params(self):
-        pass
-
-    def v_params(self):
-        pass
+        return "Moving average"
 
     def step(self, obs):
-        pass
+        a, v, logp = self.ac.step(obs)
+        self.action_log.append(a)
+        if len(self.action_log) > self.window_size:
+            self.action_log = self.action_log[-self.window_size:]
+        a_act = np.mean(self.action_log, axis=0)
+        return (a, a_act), v, logp
 
-    def get_pi(self):
-        pass
-
-    def get_v(self):
-        pass
-
-    def get_model(self):
-        pass
-
-    def load_model(self, model_path):
-        pass
+    def new_episode(self):
+        self.action_log = []
 
 
 class RecurrentPolicy(Policy):
@@ -147,13 +136,13 @@ class RecurrentPolicy(Policy):
         pass
 
 
-class RollingAveragePolicy(Policy):
+class PreviousActionPolicy(Policy):
 
     def __init__(self):
         pass
 
     def get_name(self):
-        return "Rolling average"
+        return "Previous action"
 
     def pi(self, obs, act):
         pass

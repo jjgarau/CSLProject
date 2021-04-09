@@ -21,7 +21,6 @@ class Logger:
 
         self.config = config
         self.epoch_df = self._set_up_results_log()
-        self.seed_episode_dfs = {}
         self.current_episode_df, self.current_seed, self.current_policy = None, None, None
 
         self.epoch_returns = []
@@ -46,8 +45,8 @@ class Logger:
             self.config.rolling, min_periods=1).mean()
         self.current_episode_df['Smooth jerk joints'] = self.current_episode_df['Jerk joints'].rolling(
             self.config.rolling, min_periods=1).mean()
-        self.seed_episode_dfs[self.current_seed] = self.current_episode_df
-        self.current_episode_df.to_csv(os.path.join(self.seed_dir, str(self.current_seed) + '.csv'), index=False)
+        self.current_episode_df.to_csv(os.path.join(self.seed_dir,
+                                                    self.current_policy + str(self.current_seed) + '.csv'), index=False)
         self.save_experiment()
         if self.config.plot:
             self.plot_episode_df()
@@ -102,7 +101,8 @@ class Logger:
             file.write(message)
 
     def save_model(self, model, epoch):
-        torch.save(model.state_dict(), os.path.join(self.model_dir, 'model_' + str(epoch) + '.pt'))
+        torch.save(model.state_dict(), os.path.join(self.model_dir, 'model_' + self.current_policy + '_' + str(epoch)
+                                                    + '.pt'))
 
     def _set_up_results_log(self):
 
@@ -127,7 +127,7 @@ class Logger:
     def plot_episode_df(self, figsize=(20, 8)):
         ax = sns.lineplot(x='Episode', y='Smooth return', data=self.current_episode_df)
         ax.grid(color='#c7c7c7', linestyle='--', linewidth=1)
-        path = os.path.join(self.seed_dir, 'return_' + str(self.current_seed) + '.pdf')
+        path = os.path.join(self.seed_dir, 'return_' + self.current_policy + str(self.current_seed) + '.pdf')
         plt.savefig(path, bbox_inches='tight')
         plt.close()
 
@@ -139,12 +139,12 @@ class Logger:
         sns.lineplot(x='Episode', y='Smooth jerk joints', data=self.current_episode_df, ax=axes[1])
         axes[1].grid(color='#c7c7c7', linestyle='--', linewidth=1)
 
-        path = os.path.join(self.seed_dir, 'jerk_' + str(self.current_seed) + '.pdf')
+        path = os.path.join(self.seed_dir, 'jerk_' + self.current_policy + str(self.current_seed) + '.pdf')
         fig.savefig(path, bbox_inches='tight')
         plt.close()
 
     def plot_epoch_df(self, figsize=(20, 8)):
-        ax = sns.lineplot(x='Epoch', y='Mean return', data=self.epoch_df, ci=self.config.ci)
+        ax = sns.lineplot(x='Epoch', y='Mean return', data=self.epoch_df, ci=self.config.ci, hue='Policy')
         ax.grid(color='#c7c7c7', linestyle='--', linewidth=1)
         path = os.path.join(self.dir_name, 'epoch_returns.pdf')
         plt.savefig(path, bbox_inches='tight')
@@ -152,10 +152,10 @@ class Logger:
 
         fig, axes = plt.subplots(1, 2, figsize=figsize)
 
-        sns.lineplot(x='Epoch', y='Mean jerk body', data=self.epoch_df, ci=self.config.ci, ax=axes[0])
+        sns.lineplot(x='Epoch', y='Mean jerk body', data=self.epoch_df, ci=self.config.ci, ax=axes[0], hue='Policy')
         axes[0].grid(color='#c7c7c7', linestyle='--', linewidth=1)
 
-        sns.lineplot(x='Epoch', y='Mean jerk joints', data=self.epoch_df, ci=self.config.ci, ax=axes[1])
+        sns.lineplot(x='Epoch', y='Mean jerk joints', data=self.epoch_df, ci=self.config.ci, ax=axes[1], hue='Policy')
         axes[1].grid(color='#c7c7c7', linestyle='--', linewidth=1)
 
         path = os.path.join(self.dir_name, 'epoch_jerks.pdf')

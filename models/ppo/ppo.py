@@ -56,7 +56,7 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
 
     # Prepare logger for run
     logger.set_up_seed_episode_df(policy, seed)
-    logger.log(f'Prepare run with seed {seed}')
+    logger.log(f'Prepare run with policy {policy.get_name()} and seed {seed}')
 
     # Random seed
     torch.manual_seed(seed)
@@ -137,6 +137,7 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
     # Prepare for interaction with environment
     start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
+    policy.new_episode()
 
     for epoch in tqdm(range(epochs), desc="Epoch progress"):
 
@@ -146,12 +147,17 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
 
             a, v, logp = policy.step(torch.as_tensor(o, dtype=torch.float32))
 
-            next_o, r, d, _ = env.step(a)
+            if type(a) is list or type(a) is tuple:
+                a_train, a_act = a
+            else:
+                a_train, a_act = a, a
+
+            next_o, r, d, _ = env.step(a_act)
             ep_ret += r
             ep_len += 1
 
             # save and log
-            buf.store(o, a, r, v, logp)
+            buf.store(o, a_train, r, v, logp)
             # TODO: Logger store v
 
             # Update obs (critical!)
@@ -178,6 +184,7 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
 
                 buf.finish_path(v)
                 o, ep_ret, ep_len = env.reset(), 0, 0
+                policy.new_episode()
 
         # Save model
         if (epoch % save_freq == 0) or (epoch == epochs - 1):
@@ -206,12 +213,16 @@ def ppo_eval(env, model_path, policy, seed=0, steps_per_epoch=4000, epochs=50, m
 
     start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
+    policy.new_episode()
 
     for epoch in tqdm(range(epochs), desc="Epoch progress"):
 
         for t in range(local_steps_per_epoch):
 
             a, v, logp = policy.step(torch.as_tensor(o, dtype=torch.float32))
+
+            if type(a) is list or type(a) is tuple:
+                a = a[1]
 
             next_o, r, d, _ = env.step(a)
             ep_ret += r
@@ -232,3 +243,4 @@ def ppo_eval(env, model_path, policy, seed=0, steps_per_epoch=4000, epochs=50, m
                     print(f'Warning: trajectory cut off by epoch at {ep_len} steps')
 
                 o, ep_ret, ep_len = env.reset(), 0, 0
+                policy.new_episode()

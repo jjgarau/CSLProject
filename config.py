@@ -8,7 +8,10 @@ class DefaultConfig:
         self.render = False
         self.eval_mode = False
         self.eval_model = 'test.pt'
+
+        # Policy hyperparameters
         self.policy = 'Baseline'
+        self.window_size = 10
 
         # Algorithm hyperparameters
         self.algorithm = 'PPO'
@@ -51,3 +54,5 @@ class Config(DefaultConfig):
         super().__init__()
 
         self.env_name = 'JerkAnt'
+        self.policy = ['Baseline', 'Moving average']
+        self.seed = [0, 42, 123, 23423]
