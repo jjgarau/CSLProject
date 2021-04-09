@@ -161,7 +161,6 @@ def sac_train(env, test_env=None, actor_critic=core.MLPActorCritic, ac_kwargs=di
         return ac.act(torch.as_tensor(o, dtype=torch.float32), deterministic)
 
     def test_agent():
-        epoch_returns = []
         for j in range(num_test_episodes):
             o, d, ep_ret, ep_len = test_env.reset(), False, 0, 0
             while not (d or (ep_len == max_ep_len)):
@@ -170,8 +169,7 @@ def sac_train(env, test_env=None, actor_critic=core.MLPActorCritic, ac_kwargs=di
                 o, r, d, _ = test_env.step(a)
                 ep_ret += r
                 ep_len += 1
-            epoch_returns.append(ep_ret)
-        logger.log_epoch(epoch_returns, epoch)
+        logger.log_epoch(epoch)
 
     # Prepare for interaction with environment
     total_steps = steps_per_epoch * epochs
@@ -205,7 +203,7 @@ def sac_train(env, test_env=None, actor_critic=core.MLPActorCritic, ac_kwargs=di
 
         # End of trajectory handling
         if d or ep_len == max_ep_len:
-            logger.log_episode(ep_ret, ep_len, epoch)
+            logger.log_episode(ep_ret, ep_len, epoch, env)
             o, ep_ret, ep_len = env.reset(), 0, 0
 
         # Update handling

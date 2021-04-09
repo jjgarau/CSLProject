@@ -30,7 +30,7 @@ class Logger:
         self._save_config()
 
     def set_up_seed_episode_df(self, seed):
-        column_names = common_column_names + ['Return', 'Jerk', 'Length']
+        column_names = common_column_names + ['Return', 'Jerk body', 'Jerk joints', 'Length']
         self.current_seed = int(seed)
         self.current_episode_df = {name: [] for name in column_names}
 
@@ -41,8 +41,10 @@ class Logger:
         self.current_episode_df = pd.DataFrame.from_dict(self.current_episode_df)
         self.current_episode_df['Smooth return'] = self.current_episode_df['Return'].rolling(self.config.rolling,
                                                                                              min_periods=1).mean()
-        self.current_episode_df['Smooth jerk'] = self.current_episode_df['Jerk'].rolling(self.config.rolling,
-                                                                                         min_periods=1).mean()
+        self.current_episode_df['Smooth jerk body'] = self.current_episode_df['Jerk body'].rolling(
+            self.config.rolling, min_periods=1).mean()
+        self.current_episode_df['Smooth jerk joints'] = self.current_episode_df['Jerk joints'].rolling(
+            self.config.rolling, min_periods=1).mean()
         self.seed_episode_dfs[self.current_seed] = self.current_episode_df
         self.current_episode_df.to_csv(os.path.join(self.seed_dir, str(self.current_seed) + '.csv'), index=False)
         self.save_experiment()
@@ -58,20 +60,21 @@ class Logger:
     def log_episode(self, ret, ep_len, epoch, env):
 
         try:
-            jerk = env.compute_jerk()
+            jerk_body, jerk_joints = env.compute_jerk()
         except:
-            jerk = 0
+            jerk_body, jerk_joints = 0, 0
 
         self.current_episode_df['Seed'].append(self.current_seed)
         self.current_episode_df['Epoch'].append(epoch)
         self.current_episode_df['Return'].append(ret)
-        self.current_episode_df['Jerk'].append(jerk)
+        self.current_episode_df['Jerk body'].append(jerk_body)
+        self.current_episode_df['Jerk joints'].append(jerk_joints)
         self.current_episode_df['Length'].append(ep_len)
         self.current_episode_df['Algorithm'].append(self.config.algorithm)
         self.current_episode_df['Env type'].append(self.config.env_type)
 
         self.epoch_returns.append(ret)
-        self.epoch_jerks.append(jerk)
+        self.epoch_jerks.append((jerk_body, jerk_joints))
 
     def log_epoch(self, epoch):
 
@@ -79,10 +82,13 @@ class Logger:
         self.epoch_df['Epoch'].append(epoch)
 
         mean_ret = np.mean(self.epoch_returns) if len(self.epoch_returns) > 0 else 0.0
-        mean_jerk = np.mean(self.epoch_jerks) if len(self.epoch_jerks) > 0 else 0.0
+        jerks_body, jerks_joints = [j[0] for j in self.epoch_jerks], [j[1] for j in self.epoch_jerks]
+        mean_jerk_body = np.mean(jerks_body) if len(jerks_body) > 0 else 0.0
+        mean_jerk_joints = np.mean(jerks_joints) if len(jerks_joints) > 0 else 0.0
 
         self.epoch_df['Mean return'].append(mean_ret)
-        self.epoch_df['Mean jerk'].append(mean_jerk)
+        self.epoch_df['Mean jerk body'].append(mean_jerk_body)
+        self.epoch_df['Mean jerk joints'].append(mean_jerk_joints)
         self.epoch_df['Algorithm'].append(self.config.algorithm)
         self.epoch_df['Env type'].append(self.config.env_type)
 
@@ -102,7 +108,7 @@ class Logger:
         os.makedirs(self.seed_dir, exist_ok=True)
         os.makedirs(self.model_dir, exist_ok=True)
 
-        column_names = common_column_names + ['Mean return', 'Mean jerk']
+        column_names = common_column_names + ['Mean return', 'Mean jerk body', 'Mean jerk joints']
         df = {name: [] for name in column_names}
         return df
 
@@ -117,28 +123,40 @@ class Logger:
             for k, v in config_dict.items():
                 file.write(str(k) + ': ' + str(v) + '\n')
 
-    def plot_episode_df(self):
+    def plot_episode_df(self, figsize=(20, 8)):
         ax = sns.lineplot(x='Episode', y='Smooth return', data=self.current_episode_df)
         ax.grid(color='#c7c7c7', linestyle='--', linewidth=1)
         path = os.path.join(self.seed_dir, 'return_' + str(self.current_seed) + '.pdf')
         plt.savefig(path, bbox_inches='tight')
         plt.close()
 
-        ax = sns.lineplot(x='Episode', y='Smooth jerk', data=self.current_episode_df)
-        ax.grid(color='#c7c7c7', linestyle='--', linewidth=1)
+        fig, axes = plt.subplots(1, 2, figsize=figsize)
+
+        sns.lineplot(x='Episode', y='Smooth jerk body', data=self.current_episode_df, ax=axes[0])
+        axes[0].grid(color='#c7c7c7', linestyle='--', linewidth=1)
+
+        sns.lineplot(x='Episode', y='Smooth jerk joints', data=self.current_episode_df, ax=axes[1])
+        axes[1].grid(color='#c7c7c7', linestyle='--', linewidth=1)
+
         path = os.path.join(self.seed_dir, 'jerk_' + str(self.current_seed) + '.pdf')
-        plt.savefig(path, bbox_inches='tight')
+        fig.savefig(path, bbox_inches='tight')
         plt.close()
 
-    def plot_epoch_df(self):
+    def plot_epoch_df(self, figsize=(20, 8)):
         ax = sns.lineplot(x='Epoch', y='Mean return', data=self.epoch_df, ci=self.config.ci)
         ax.grid(color='#c7c7c7', linestyle='--', linewidth=1)
         path = os.path.join(self.dir_name, 'epoch_returns.pdf')
         plt.savefig(path, bbox_inches='tight')
         plt.close()
 
-        ax = sns.lineplot(x='Epoch', y='Mean jerk', data=self.epoch_df, ci=self.config.ci)
-        ax.grid(color='#c7c7c7', linestyle='--', linewidth=1)
+        fig, axes = plt.subplots(1, 2, figsize=figsize)
+
+        sns.lineplot(x='Epoch', y='Mean jerk body', data=self.epoch_df, ci=self.config.ci, ax=axes[0])
+        axes[0].grid(color='#c7c7c7', linestyle='--', linewidth=1)
+
+        sns.lineplot(x='Epoch', y='Mean jerk joints', data=self.epoch_df, ci=self.config.ci, ax=axes[1])
+        axes[1].grid(color='#c7c7c7', linestyle='--', linewidth=1)
+
         path = os.path.join(self.dir_name, 'epoch_jerks.pdf')
-        plt.savefig(path, bbox_inches='tight')
+        fig.savefig(path, bbox_inches='tight')
         plt.close()

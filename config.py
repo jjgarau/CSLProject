@@ -42,7 +42,7 @@ class DefaultConfig:
         self.verbose = True
         self.plot = True
         self.rolling = 20
-        self.ci = 'sd'
+        self.ci = 95
 
 
 class Config(DefaultConfig):
@@ -51,3 +51,4 @@ class Config(DefaultConfig):
         super().__init__()
 
         self.env_name = 'JerkAnt'
+        self.seed = [0, 1, 10, 100, 1000]
