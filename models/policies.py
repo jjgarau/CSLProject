@@ -132,10 +132,11 @@ class ActionDifferencePolicy(BaselinePolicy):
 
 class PreviousActionPolicy(Policy):
 
-    def __init__(self, observation_space, action_space, hidden_sizes=(64, 64), activation=nn.Tanh):
+    def __init__(self, observation_space, action_space, hidden_sizes=(64, 64), activation=nn.Tanh, gpu=True):
         super().__init__()
         self.obs_dim = observation_space.shape[0]
         self.act_dim = action_space.shape[0]
+        self.device = 'cuda:0' if gpu and torch.cuda.is_available() else 'cpu'
 
         if isinstance(action_space, Box):
             self.actor = MLPGaussianActor(self.obs_dim + self.act_dim, self.act_dim, hidden_sizes, activation)
@@ -152,7 +153,7 @@ class PreviousActionPolicy(Policy):
         return "Previous action"
 
     def pi(self, obs, act):
-        shifted_act = torch.cat((torch.zeros((1, act.shape[-1])), act))
+        shifted_act = torch.cat((torch.zeros((1, act.shape[-1])).to(self.device), act))
         shifted_act = shifted_act[:-1]
         full_obs = torch.cat((obs, shifted_act), dim=-1)
         return self.actor(full_obs, act)
