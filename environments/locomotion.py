@@ -15,14 +15,18 @@ class JerkAnt(AntBulletEnv):
         return obs
 
     def step(self, a):
-        obs, r, d, _ = super().step(a)
+        obs, r, d, debug = super().step(a)
         self.obs_sequence.append(obs)
-        return obs, r, d, None
+        r = max(r, 0)
+        return obs, r, d, debug
 
-    def get_jerk_from_v(self, v):
+    def get_jerk_from_v(self, v, take_norm=True):
         a = np.diff(v, axis=0)
         j = np.diff(a, axis=0)
-        j = np.max(np.sqrt(np.sum(j ** 2, axis=-1)))
+        if take_norm:
+            j = np.max(np.sqrt(np.sum(j ** 2, axis=-1)))
+        else:
+            j = np.max(np.abs(j))
         return j
 
     def compute_jerk_body(self, seq):
@@ -32,7 +36,7 @@ class JerkAnt(AntBulletEnv):
     def compute_jerk_joints(self, seq):
         seq = [seq[:, 9 + 2 * i] for i in range(8)]
         v = np.array(seq).T
-        return self.get_jerk_from_v(v)
+        return self.get_jerk_from_v(v, take_norm=False)
 
     def compute_jerk(self):
         seq = np.array(self.obs_sequence)

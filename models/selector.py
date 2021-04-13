@@ -96,7 +96,11 @@ class RunSelector:
 
         if p == 'Baseline':
             return BaselinePolicy(env.observation_space, env.action_space)
-        if p == 'Moving average':
+        elif p == 'Moving average':
             return MovingAveragePolicy(env.observation_space, env.action_space, window_size=config.window_size)
+        elif p == 'Action difference':
+            return ActionDifferencePolicy(env.observation_space, env.action_space)
+        elif p == 'Previous action':
+            return PreviousActionPolicy(env.observation_space, env.action_space)
         else:
             raise NotImplementedError

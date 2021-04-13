@@ -92,6 +92,9 @@ class Logger:
         self.epoch_df['Algorithm'].append(self.config.algorithm)
         self.epoch_df['Policy'].append(self.current_policy)
 
+        self.epoch_returns = []
+        self.epoch_jerks = []
+
     def log(self, message, add_end_line=True):
         if self.config.verbose:
             print(message, flush=True)
@@ -101,8 +104,11 @@ class Logger:
             file.write(message)
 
     def save_model(self, model, epoch):
-        torch.save(model.state_dict(), os.path.join(self.model_dir, 'model_' + self.current_policy + '_' + str(epoch)
-                                                    + '.pt'))
+        path = os.path.join(self.model_dir, 'model_' + self.current_policy + '_' + str(epoch) + '.pt')
+        if type(model) is tuple:
+            torch.save({str(i): m.state_dict() for i, m in enumerate(model)}, path)
+        else:
+            torch.save(model.state_dict(), path)
 
     def _set_up_results_log(self):
 
