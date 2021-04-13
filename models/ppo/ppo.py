@@ -187,7 +187,7 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
                         logger.log(f'Warning: trajectory cut off by epoch at {ep_len} steps')
 
                 if timeout or epoch_ended:
-                    _, v, _ = policy.step(torch.as_tensor(o, dtype=torch.float32))
+                    _, v, _ = policy.step(torch.as_tensor(o, dtype=torch.float32).to(device))
                 else:
                     v = 0
 
