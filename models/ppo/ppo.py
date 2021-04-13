@@ -63,7 +63,6 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
         device = 'cuda:0'
     else:
         device = 'cpu'
-    policy.send_to_device(device)
 
     # Random seed
     torch.manual_seed(seed)
@@ -154,7 +153,7 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
 
         for t in range(local_steps_per_epoch):
 
-            a, v, logp = policy.step(torch.as_tensor(o, dtype=torch.float32))
+            a, v, logp = policy.step(torch.as_tensor(o, dtype=torch.float32).to(device))
 
             if type(a) is list or type(a) is tuple:
                 a_train, a_act = a
