@@ -8,6 +8,8 @@ class DefaultConfig:
         self.render = False
         self.eval_mode = False
         self.eval_model = 'test.pt'
+        self.penalize_jerk = False
+        self.jerk_weight = 50
 
         # Policy hyperparameters
         self.policy = 'Baseline'
@@ -55,6 +57,7 @@ class Config(DefaultConfig):
         super().__init__()
 
         self.env_name = 'JerkAnt'
+        self.penalize_jerk = True
         self.policy = ['Baseline', 'Moving average', 'Previous action', 'Action difference']
         self.seed = [0, 42, 100, 12313, 12423423]
         self.epochs = 101

@@ -163,11 +163,17 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
                 a_train, a_act = a, a
 
             next_o, r, d, _ = env.step(a_act)
-            ep_ret += r
+
+            if type(r) is list or type(r) is tuple:
+                r_log, r_train = r
+            else:
+                r_log, r_train = r, r
+
+            ep_ret += r_log
             ep_len += 1
 
             # save and log
-            buf.store(o, a_train, r, v, logp)
+            buf.store(o, a_train, r_train, v, logp)
             # TODO: Logger store v
 
             # Update obs (critical!)

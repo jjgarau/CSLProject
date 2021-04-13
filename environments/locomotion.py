@@ -5,9 +5,11 @@ from pybullet_envs.gym_locomotion_envs import AntBulletEnv
 
 class JerkAnt(AntBulletEnv):
 
-    def __init__(self):
+    def __init__(self, penalize_jerk=False, jerk_weight=50):
         super().__init__()
         self.obs_sequence = []
+        self.penalize_jerk = penalize_jerk
+        self.jerk_weight = jerk_weight
 
     def reset(self):
         obs = super().reset()
@@ -18,7 +20,13 @@ class JerkAnt(AntBulletEnv):
         obs, r, d, debug = super().step(a)
         self.obs_sequence.append(obs)
         r = max(r, 0)
-        return obs, r, d, debug
+        if self.penalize_jerk:
+            j = self.compute_jerk(all_t=False) if len(self.obs_sequence) > 2 else (0, 0)
+            j = sum(j)
+            r_jerk = r - j * self.jerk_weight
+            return obs, (r, r_jerk), d, debug
+        else:
+            return obs, r, d, debug
 
     def get_jerk_from_v(self, v, take_norm=True):
         a = np.diff(v, axis=0)
@@ -38,8 +46,11 @@ class JerkAnt(AntBulletEnv):
         v = np.array(seq).T
         return self.get_jerk_from_v(v, take_norm=False)
 
-    def compute_jerk(self):
-        seq = np.array(self.obs_sequence)
+    def compute_jerk(self, all_t=True):
+        if all_t:
+            seq = np.array(self.obs_sequence)
+        else:
+            seq = np.array(self.obs_sequence[-3:])
         body = self.compute_jerk_body(seq)
         joints = self.compute_jerk_joints(seq)
         return body, joints

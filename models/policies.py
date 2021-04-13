@@ -52,9 +52,10 @@ class BaselinePolicy(Policy):
 
     def __init__(self, observation_space, action_space, hidden_sizes=(64, 64), activation=nn.Tanh):
         self.ac = MLPActorCritic(observation_space, action_space, hidden_sizes, activation)
+        self.name = "Baseline"
 
     def get_name(self):
-        return "Baseline"
+        return self.name
 
     def pi(self, obs, act):
         return self.ac.pi(obs, act)
@@ -95,9 +96,7 @@ class MovingAveragePolicy(BaselinePolicy):
         super().__init__(observation_space, action_space, hidden_sizes, activation)
         self.window_size = window_size
         self.action_log = []
-
-    def get_name(self):
-        return "Moving average"
+        self.name = "Moving average"
 
     def step(self, obs):
         a, v, logp = self.ac.step(obs)
@@ -117,9 +116,7 @@ class ActionDifferencePolicy(BaselinePolicy):
         super().__init__(observation_space, action_space, hidden_sizes, activation)
         self.action_space = action_space
         self.action = np.zeros(self.action_space.shape, dtype=float)
-
-    def get_name(self):
-        return "Action difference"
+        self.name = "Action difference"
 
     def step(self, obs):
         a, v, logp = self.ac.step(obs)
@@ -137,6 +134,7 @@ class PreviousActionPolicy(Policy):
         self.obs_dim = observation_space.shape[0]
         self.act_dim = action_space.shape[0]
         self.device = 'cuda:0' if gpu and torch.cuda.is_available() else 'cpu'
+        self.name = "Previous action"
 
         if isinstance(action_space, Box):
             self.actor = MLPGaussianActor(self.obs_dim + self.act_dim, self.act_dim, hidden_sizes, activation)
@@ -150,7 +148,7 @@ class PreviousActionPolicy(Policy):
         self.previous_action = torch.zeros(self.act_dim, dtype=torch.float32)
 
     def get_name(self):
-        return "Previous action"
+        return self.name
 
     def pi(self, obs, act):
         shifted_act = torch.cat((torch.zeros((1, act.shape[-1])).to(self.device), act))
@@ -205,10 +203,10 @@ class PreviousActionPolicy(Policy):
 class RecurrentPolicy(Policy):
 
     def __init__(self):
-        pass
+        self.name = "Recurrent"
 
     def get_name(self):
-        return "Recurrent"
+        return self.name
 
     def pi(self, obs, act):
         pass
