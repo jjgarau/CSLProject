@@ -174,7 +174,7 @@ class PreviousActionPolicy(Policy):
             logp_a = self.actor._log_prob_from_distribution(pi, a)
             v = self.critic(obs)
             self.previous_action = a
-        return a.numpy(), v.numpy(), logp_a.numpy()
+        return a.cpu().numpy(), v.cpu().numpy(), logp_a.cpu().numpy()
 
     def get_pi(self):
         return self.actor
