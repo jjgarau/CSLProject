@@ -13,6 +13,7 @@ class JerkAnt(AntBulletEnv):
 
     def reset(self):
         obs = super().reset()
+        self.obs_sequence = []
         self.obs_sequence.append(obs)
         return obs
 
@@ -21,8 +22,7 @@ class JerkAnt(AntBulletEnv):
         self.obs_sequence.append(obs)
         r = max(r, 0)
         if self.penalize_jerk:
-            j = self.compute_jerk(all_t=False) if len(self.obs_sequence) > 2 else (0, 0)
-            j = sum(j)
+            j = sum(self.compute_jerk(all_t=False))
             r_jerk = r - j * self.jerk_weight
             return obs, (r, r_jerk), d, debug
         else:
@@ -47,6 +47,8 @@ class JerkAnt(AntBulletEnv):
         return self.get_jerk_from_v(v, take_norm=False)
 
     def compute_jerk(self, all_t=True):
+        if len(self.obs_sequence) <= 2:
+            return 0, 0
         if all_t:
             seq = np.array(self.obs_sequence)
         else:

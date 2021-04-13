@@ -57,7 +57,7 @@ class Config(DefaultConfig):
         super().__init__()
 
         self.env_name = 'JerkAnt'
-        self.penalize_jerk = True
+        # self.penalize_jerk = True
         self.policy = ['Baseline', 'Moving average', 'Previous action', 'Action difference']
         self.seed = [0, 42, 100, 12313, 12423423]
-        self.epochs = 101
+        self.epochs = 61
