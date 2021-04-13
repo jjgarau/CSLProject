@@ -85,7 +85,7 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
     # Set up function for computing PPO policy loss
     def compute_loss_pi(data):
         obs, act, adv, logp_old = data['obs'], data['act'], data['adv'], data['logp']
-        obs = obs.to(device)
+        obs, act, adv, logp_old = obs.to(device), act.to(device), adv.to(device), logp_old.to(device)
 
         # Policy loss
         pi, logp = policy.pi(obs, act)
@@ -105,7 +105,7 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
     # Set up function for computing value loss
     def compute_loss_v(data):
         obs, ret = data['obs'], data['ret']
-        obs = obs.to(device)
+        obs, ret = obs.to(device), ret.to(device)
         return ((policy.v(obs) - ret) ** 2).mean()
 
     # Set up optimizers for policy and value function
