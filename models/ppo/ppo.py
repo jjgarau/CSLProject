@@ -63,7 +63,6 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
         device = 'cuda:0'
     else:
         device = 'cpu'
-    policy.send_to_device(device)
 
     # Random seed
     torch.manual_seed(seed)
@@ -115,6 +114,7 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
     # TODO: Logger set up model saving
 
     def update():
+        policy.send_to_device(device)
         data = buf.get()
 
         pi_l_old, pi_info_old = compute_loss_pi(data)
@@ -151,10 +151,11 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
     for epoch in tqdm(range(epochs), desc="Epoch progress"):
 
         logger.log(f'Starting epoch {epoch}')
+        policy.send_to_device('cpu')
 
         for t in range(local_steps_per_epoch):
 
-            a, v, logp = policy.step(torch.as_tensor(o, dtype=torch.float32).to(device))
+            a, v, logp = policy.step(torch.as_tensor(o, dtype=torch.float32))
 
             if type(a) is list or type(a) is tuple:
                 a_train, a_act = a
@@ -187,7 +188,7 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
                         logger.log(f'Warning: trajectory cut off by epoch at {ep_len} steps')
 
                 if timeout or epoch_ended:
-                    _, v, _ = policy.step(torch.as_tensor(o, dtype=torch.float32).to(device))
+                    _, v, _ = policy.step(torch.as_tensor(o, dtype=torch.float32))
                 else:
                     v = 0
 
