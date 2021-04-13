@@ -63,7 +63,7 @@ class RunSelector:
                                                  train_pi_iters=config.train_pi_iters,
                                                  train_v_iters=config.train_v_iters, lam=config.lam,
                                                  max_ep_len=config.max_ep_len, target_kl=config.target_kl,
-                                                 save_freq=config.save_freq, logger=logger)
+                                                 save_freq=config.save_freq, logger=logger, gpu=config.gpu)
 
         elif config.algorithm == 'SAC':
 

@@ -41,6 +41,9 @@ class Policy:
     def load_model(self, model_path):
         raise NotImplementedError
 
+    def send_to_device(self, device):
+        raise NotImplementedError
+
     def new_episode(self):
         pass
 
@@ -76,6 +79,9 @@ class BaselinePolicy(Policy):
 
     def get_model(self):
         return self.ac
+
+    def send_to_device(self, device):
+        self.ac.to(device)
 
     def load_model(self, model_path, eval_model=True):
         self.ac.load_state_dict(torch.load(model_path))
@@ -187,6 +193,10 @@ class PreviousActionPolicy(Policy):
             self.actor.eval()
             self.critic.eval()
 
+    def send_to_device(self, device):
+        self.actor.to(device)
+        self.critic.to(device)
+
     def new_episode(self):
         self.previous_action = torch.zeros(self.act_dim, dtype=torch.float32)
 
@@ -221,6 +231,9 @@ class RecurrentPolicy(Policy):
         pass
 
     def get_model(self):
+        pass
+
+    def send_to_device(self, device):
         pass
 
     def load_model(self, model_path):

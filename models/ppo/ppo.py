@@ -52,11 +52,18 @@ class PPOBuffer:
 
 def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, clip_ratio=0.2, pi_lr=3e-4,
               vf_lr=1e-3, train_pi_iters=80, train_v_iters=80, lam=0.97, max_ep_len=1000, target_kl=0.01,
-              save_freq=10, logger=None):
+              save_freq=10, logger=None, gpu=False):
 
     # Prepare logger for run
     logger.set_up_seed_episode_df(policy, seed)
     logger.log(f'Prepare run with policy {policy.get_name()} and seed {seed}')
+
+    # Set up device
+    if gpu and torch.cuda.is_available():
+        device = 'cuda:0'
+    else:
+        device = 'cpu'
+    policy.send_to_device(device)
 
     # Random seed
     torch.manual_seed(seed)
