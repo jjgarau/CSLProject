@@ -56,5 +56,5 @@ class Config(DefaultConfig):
 
         self.env_name = 'JerkAnt'
         self.policy = ['Baseline', 'Moving average', 'Previous action', 'Action difference']
-        # self.seed = [0, 42, 100, 12313, 12423423]
-        self.epochs = 11
+        self.seed = [0, 42, 100, 12313, 12423423]
+        self.epochs = 101
