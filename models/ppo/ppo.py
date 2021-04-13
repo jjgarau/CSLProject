@@ -63,6 +63,7 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
         device = 'cuda:0'
     else:
         device = 'cpu'
+    policy.send_to_device(device)
 
     # Random seed
     torch.manual_seed(seed)
