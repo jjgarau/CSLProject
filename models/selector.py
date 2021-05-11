@@ -57,13 +57,16 @@ class RunSelector:
                                                 steps_per_epoch=config.steps_per_epoch, epochs=config.epochs,
                                                 max_ep_len=config.max_ep_len)
             else:
+                load_model_path = None if config.train_from_scratch else os.path.join('eval', config.load_model_path)
+
                 def runner(x, y, env): ppo_train(env=env, policy=x, seed=y, steps_per_epoch=config.steps_per_epoch,
                                                  epochs=config.epochs, gamma=config.gamma, clip_ratio=config.clip_ratio,
                                                  pi_lr=config.pi_lr, vf_lr=config.vf_lr,
                                                  train_pi_iters=config.train_pi_iters,
                                                  train_v_iters=config.train_v_iters, lam=config.lam,
                                                  max_ep_len=config.max_ep_len, target_kl=config.target_kl,
-                                                 save_freq=config.save_freq, logger=logger, gpu=config.gpu)
+                                                 save_freq=config.save_freq, logger=logger, gpu=config.gpu,
+                                                 load_model_path=load_model_path)
 
         elif config.algorithm == 'SAC':
 

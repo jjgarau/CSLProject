@@ -15,6 +15,8 @@ class DefaultConfig:
         self.policy = 'Baseline'
         self.window_size = 10
         self.gpu = True
+        self.train_from_scratch = True
+        self.load_model_path = 'train.pt'
 
         # Algorithm hyperparameters
         self.algorithm = 'PPO'
@@ -61,4 +63,5 @@ class Config(DefaultConfig):
         # self.policy = ['Baseline', 'Moving average', 'Previous action', 'Action difference']
         # self.seed = [0, 42, 100, 12313, 12423423]
         self.epochs = 1001
-        self.save_freq = 25
+        self.save_freq = 50
+        self.train_from_scratch = False
