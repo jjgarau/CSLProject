@@ -111,8 +111,6 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
     pi_optimizer = Adam(policy.pi_params(), lr=pi_lr)
     vf_optimizer = Adam(policy.v_params(), lr=vf_lr)
 
-    # TODO: Logger set up model saving
-
     def update():
         policy.send_to_device(device)
         data = buf.get()

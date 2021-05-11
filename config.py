@@ -56,8 +56,9 @@ class Config(DefaultConfig):
     def __init__(self):
         super().__init__()
 
-        self.env_name = 'JerkAnt'
-        self.penalize_jerk = True
-        self.policy = ['Baseline', 'Moving average', 'Previous action', 'Action difference']
-        self.seed = [0, 42, 100, 12313, 12423423]
-        self.epochs = 61
+        self.env_name = 'HumanoidBulletEnv-v0'
+        # self.penalize_jerk = True
+        # self.policy = ['Baseline', 'Moving average', 'Previous action', 'Action difference']
+        # self.seed = [0, 42, 100, 12313, 12423423]
+        self.epochs = 1001
+        self.save_freq = 25
