@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from gym.spaces import Box, Discrete
 
-from models.ppo.core import MLPActorCritic, MLPCritic, MLPGaussianActor, MLPCategoricalActor
+from models.ppo.core import MLPActorCritic, MLPCritic, MLPGaussianActor, MLPCategoricalActor, RNNActorCritic
 from pybullet_envs.gym_locomotion_envs import AntBulletEnv
 from pybullet_envs.robot_locomotors import Ant
 from pybullet_envs.robot_bases import MJCFBasedRobot
@@ -45,7 +45,7 @@ class Policy:
         raise NotImplementedError
 
     def new_episode(self):
-        pass
+        raise NotImplementedError
 
 
 class BaselinePolicy(Policy):
@@ -88,6 +88,9 @@ class BaselinePolicy(Policy):
         self.ac.load_state_dict(torch.load(model_path))
         if eval_model:
             self.ac.eval()
+
+    def new_episode(self):
+        pass
 
 
 class MovingAveragePolicy(BaselinePolicy):
@@ -202,8 +205,15 @@ class PreviousActionPolicy(Policy):
 
 class RecurrentPolicy(Policy):
 
-    def __init__(self):
+    def __init__(self, observation_space, action_space, hidden_size=64, num_layers=1):
+        super().__init__()
+        self.ac = RNNActorCritic(observation_space, action_space, hidden_size, num_layers)
         self.name = "Recurrent"
+
+        self.num_layers = num_layers
+        self.hidden_size = hidden_size
+        self.h_v = torch.zeros((1, self.num_layers, self.hidden_size), dtype=torch.float32)
+        self.h_pi = torch.zeros((1, self.num_layers, self.hidden_size), dtype=torch.float32)
 
     def get_name(self):
         return self.name
@@ -215,25 +225,33 @@ class RecurrentPolicy(Policy):
         pass
 
     def pi_params(self):
-        pass
+        return self.ac.pi.parameters()
 
     def v_params(self):
-        pass
+        return self.ac.v.parameters()
 
     def step(self, obs):
-        pass
+        output = self.ac.step(obs, self.h_pi, self.h_v)
+        a, v, logp_a, self.h_pi, self.h_v = output
+        return a, v, logp_a
 
     def get_pi(self):
-        pass
+        return self.ac.pi
 
     def get_v(self):
-        pass
+        return self.ac.v
 
     def get_model(self):
-        pass
+        return self.ac
 
     def send_to_device(self, device):
-        pass
+        self.ac.to(device)
 
-    def load_model(self, model_path):
-        pass
+    def load_model(self, model_path, eval_model=True):
+        self.ac.load_state_dict(torch.load(model_path))
+        if eval_model:
+            self.ac.eval()
+
+    def new_episode(self):
+        self.h_v = torch.zeros((1, self.num_layers, self.hidden_size), dtype=torch.float32)
+        self.h_pi = torch.zeros((1, self.num_layers, self.hidden_size), dtype=torch.float32)

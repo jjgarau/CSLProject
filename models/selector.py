@@ -105,5 +105,7 @@ class RunSelector:
             return ActionDifferencePolicy(env.observation_space, env.action_space)
         elif p == 'Previous action':
             return PreviousActionPolicy(env.observation_space, env.action_space)
+        elif p == 'Recurrent':
+            return RecurrentPolicy(env.observation_space, env.action_space)
         else:
             raise NotImplementedError

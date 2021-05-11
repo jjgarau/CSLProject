@@ -16,16 +16,18 @@ class PPOBuffer:
         self.ret_buf = np.zeros(size, dtype=np.float32)
         self.val_buf = np.zeros(size, dtype=np.float32)
         self.logp_buf = np.zeros(size, dtype=np.float32)
+        self.done_buf = np.zeros(size, dtype=np.float32)
         self.gamma, self.lam = gamma, lam
         self.ptr, self.path_start_idx, self.max_size = 0, 0, size
 
-    def store(self, obs, act, rew, val, logp):
+    def store(self, obs, act, rew, val, logp, done):
         assert self.ptr < self.max_size
         self.obs_buf[self.ptr] = obs
         self.act_buf[self.ptr] = act
         self.rew_buf[self.ptr] = rew
         self.val_buf[self.ptr] = val
         self.logp_buf[self.ptr] = logp
+        self.done_buf[self.ptr] = done
         self.ptr += 1
 
     def finish_path(self, last_val=0):
@@ -45,8 +47,8 @@ class PPOBuffer:
     def get(self):
         assert self.ptr == self.max_size
         self.ptr, self.path_start_idx = 0, 0
-        # TODO: multiprocessing stuff was here
-        data = dict(obs=self.obs_buf, act=self.act_buf, ret=self.ret_buf, adv=self.adv_buf, logp=self.logp_buf)
+        data = dict(obs=self.obs_buf, act=self.act_buf, ret=self.ret_buf, adv=self.adv_buf, logp=self.logp_buf,
+                    done=self.done_buf)
         return {k: torch.as_tensor(v, dtype=torch.float32) for k, v in data.items()}
 
 
@@ -175,7 +177,7 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
             ep_len += 1
 
             # save and log
-            buf.store(o, a_train, r_train, v, logp)
+            buf.store(o, a_train, r_train, v, logp, d)
             # TODO: Logger store v
 
             # Update obs (critical!)

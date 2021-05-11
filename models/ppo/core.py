@@ -110,3 +110,74 @@ class MLPActorCritic(nn.Module):
 
     def act(self, obs):
         return self.step(obs)[0]
+
+
+class RNNCategoricalActor(Actor):
+
+    def __init__(self, obs_dim, act_dim, hidden_size, activation):
+        super().__init__()
+        self.logits_net = None
+
+    def _distribution(self, obs):
+        logits = None
+        return Categorical(logits=logits)
+
+    def _log_prob_from_distribution(self, pi, act):
+        return None
+
+
+class RNNGaussianActor(Actor):
+
+    def __init__(self, obs_dim, act_dim, hidden_size, num_layers):
+        super().__init__()
+        log_std = - 0.5 * np.ones(act_dim, dtype=np.float32)
+        self.log_std = torch.nn.Parameter(torch.as_tensor(log_std))
+        self.mu_net = nn.GRU(input_size=obs_dim, hidden_size=hidden_size, batch_first=True, num_layers=num_layers)
+        self.linear = nn.Linear(hidden_size, act_dim)
+
+    def _distribution(self, obs, h):
+        mu, h = self.mu_net(obs, h)
+        mu = self.linear(mu)
+        std = torch.exp(self.log_std)
+        return Normal(mu, std), h
+
+    def _log_prob_from_distribution(self, pi, act):
+        return None
+
+
+class RNNCritic(nn.Module):
+
+    def __init__(self, obs_dim, hidden_size, num_layers=1):
+        super().__init__()
+        self.v_net = nn.GRU(input_size=obs_dim, hidden_size=hidden_size, batch_first=True, num_layers=num_layers)
+        self.linear = nn.Linear(hidden_size, 1)
+
+    def forward(self, obs):
+        return None
+
+
+class RNNActorCritic(nn.Module):
+
+    def __init__(self, observation_space, action_space, hidden_size=64, num_layers=1):
+        super().__init__()
+        obs_dim = observation_space.shape[0]
+
+        if isinstance(action_space, Box):
+            self.pi = RNNGaussianActor()
+        elif isinstance(action_space, Discrete):
+            self.pi = RNNCategoricalActor()
+        else:
+            self.pi = None
+
+        self.v = RNNCritic()
+
+    def step(self, obs, h_pi, h_v):
+        with torch.no_grad():
+            pi, new_h_pi = self.pi._distribution(obs, h_pi)
+            a = pi.sample()
+            logp_a = self.pi._log_prob_from_distribution()
+            v, new_h_v = self.v(obs, h_v)
+        return a.cpu().numpy(), v.cpu().numpy(), logp_a.cpu().numpy(), new_h_pi, new_h_v
+
+    def act(self, obs):
+        pass
