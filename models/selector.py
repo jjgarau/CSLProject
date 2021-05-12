@@ -40,9 +40,9 @@ class RunSelector:
                 env.render()
 
             pol = self.select_policy(env, p, config)
-            self.select_algorithm(logger, config)(pol, s, env)
+            self.select_algorithm(logger, p, config)(pol, s, env)
 
-    def select_algorithm(self, logger, config=None):
+    def select_algorithm(self, logger, p, config=None):
 
         config = self.config if config is None else config
 
@@ -56,7 +56,7 @@ class RunSelector:
                                                 max_ep_len=config.max_ep_len)
             else:
                 load_model_path = None if config.train_from_scratch else os.path.join('eval', config.load_model_path)
-                recurrent = True if config.policy == 'Recurrent' else False
+                recurrent = True if p == 'Recurrent' else False
 
                 def runner(x, y, env): ppo_train(env=env, policy=x, seed=y, steps_per_epoch=config.steps_per_epoch,
                                                  epochs=config.epochs, gamma=config.gamma, clip_ratio=config.clip_ratio,
