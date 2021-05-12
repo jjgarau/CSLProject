@@ -17,6 +17,7 @@ class DefaultConfig:
         self.gpu = True
         self.train_from_scratch = True
         self.load_model_path = 'train.pt'
+        self.recurrent_hidden_size = 64
 
         # Algorithm hyperparameters
         self.algorithm = 'PPO'
@@ -58,10 +59,12 @@ class Config(DefaultConfig):
     def __init__(self):
         super().__init__()
 
-        self.env_name = 'HumanoidBulletEnv-v0'
+        self.env_name = 'JerkAnt'
+        self.policy = ['Recurrent', 'Baseline']
+        self.gpu = False
         # self.penalize_jerk = True
         # self.policy = ['Baseline', 'Moving average', 'Previous action', 'Action difference']
-        # self.seed = [0, 42, 100, 12313, 12423423]
-        self.epochs = 1001
-        self.save_freq = 50
-        self.train_from_scratch = False
+        self.seed = [0, 42, 100, 12313, 12423423]
+        self.epochs = 101
+        # self.save_freq = 50
+

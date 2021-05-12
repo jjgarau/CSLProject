@@ -14,10 +14,10 @@ class Policy:
     def get_name(self):
         raise NotImplementedError
 
-    def pi(self, obs, act):
+    def pi(self, obs, act, h=None):
         raise NotImplementedError
 
-    def v(self, obs):
+    def v(self, obs, h=None):
         raise NotImplementedError
 
     def pi_params(self):
@@ -57,10 +57,10 @@ class BaselinePolicy(Policy):
     def get_name(self):
         return self.name
 
-    def pi(self, obs, act):
+    def pi(self, obs, act, h=None):
         return self.ac.pi(obs, act)
 
-    def v(self, obs):
+    def v(self, obs, h=None):
         return self.ac.v(obs)
 
     def pi_params(self):
@@ -153,13 +153,13 @@ class PreviousActionPolicy(Policy):
     def get_name(self):
         return self.name
 
-    def pi(self, obs, act):
+    def pi(self, obs, act, h=None):
         shifted_act = torch.cat((torch.zeros((1, act.shape[-1])).to(self.device), act))
         shifted_act = shifted_act[:-1]
         full_obs = torch.cat((obs, shifted_act), dim=-1)
         return self.actor(full_obs, act)
 
-    def v(self, obs):
+    def v(self, obs, h=None):
         return self.critic(obs)
 
     def pi_params(self):
@@ -218,11 +218,16 @@ class RecurrentPolicy(Policy):
     def get_name(self):
         return self.name
 
-    def pi(self, obs, act):
-        pass
+    def pi(self, obs, act, h=None):
+        h = h.unsqueeze(0)
+        obs = obs.unsqueeze(1)
+        return self.ac.pi(obs, h, act)
 
-    def v(self, obs):
-        pass
+    def v(self, obs, h=None):
+        h = h.unsqueeze(0)
+        obs = obs.unsqueeze(1)
+        v, _ = self.ac.v(obs, h)
+        return v
 
     def pi_params(self):
         return self.ac.pi.parameters()
@@ -231,9 +236,10 @@ class RecurrentPolicy(Policy):
         return self.ac.v.parameters()
 
     def step(self, obs):
+        obs = obs.unsqueeze(0).unsqueeze(0)
         output = self.ac.step(obs, self.h_pi, self.h_v)
         a, v, logp_a, self.h_pi, self.h_v = output
-        return a, v, logp_a
+        return a, v, logp_a, self.h_pi.squeeze().cpu().numpy(), self.h_v.squeeze().cpu().numpy()
 
     def get_pi(self):
         return self.ac.pi

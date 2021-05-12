@@ -112,21 +112,37 @@ class MLPActorCritic(nn.Module):
         return self.step(obs)[0]
 
 
-class RNNCategoricalActor(Actor):
+class RNNActor(nn.Module):
 
-    def __init__(self, obs_dim, act_dim, hidden_size, activation):
-        super().__init__()
-        self.logits_net = None
-
-    def _distribution(self, obs):
-        logits = None
-        return Categorical(logits=logits)
+    def _distribution(self, obs, h):
+        raise NotImplementedError
 
     def _log_prob_from_distribution(self, pi, act):
-        return None
+        raise NotImplementedError
+
+    def forward(self, obs, h, act=None):
+        pi, _ = self._distribution(obs, h)
+        logp_a = self._log_prob_from_distribution(pi, act) if act is not None else None
+        return pi, logp_a
 
 
-class RNNGaussianActor(Actor):
+class RNNCategoricalActor(RNNActor):
+
+    def __init__(self, obs_dim, act_dim, hidden_size, num_layers):
+        super().__init__()
+        self.logits_net = nn.GRU(input_size=obs_dim, hidden_size=hidden_size, batch_first=True, num_layers=num_layers)
+        self.linear = nn.Linear(hidden_size, act_dim)
+
+    def _distribution(self, obs, h):
+        logits, h = self.logits_net(obs, h)
+        logits = self.linear(logits).squeeze()
+        return Categorical(logits=logits), h
+
+    def _log_prob_from_distribution(self, pi, act):
+        return pi.log_prob(act)
+
+
+class RNNGaussianActor(RNNActor):
 
     def __init__(self, obs_dim, act_dim, hidden_size, num_layers):
         super().__init__()
@@ -137,12 +153,12 @@ class RNNGaussianActor(Actor):
 
     def _distribution(self, obs, h):
         mu, h = self.mu_net(obs, h)
-        mu = self.linear(mu)
+        mu = self.linear(mu).squeeze()
         std = torch.exp(self.log_std)
         return Normal(mu, std), h
 
     def _log_prob_from_distribution(self, pi, act):
-        return None
+        return pi.log_prob(act).sum(axis=-1)
 
 
 class RNNCritic(nn.Module):
@@ -152,8 +168,10 @@ class RNNCritic(nn.Module):
         self.v_net = nn.GRU(input_size=obs_dim, hidden_size=hidden_size, batch_first=True, num_layers=num_layers)
         self.linear = nn.Linear(hidden_size, 1)
 
-    def forward(self, obs):
-        return None
+    def forward(self, obs, h):
+        v, h = self.v_net(obs, h)
+        v = self.linear(v).squeeze()
+        return v, h
 
 
 class RNNActorCritic(nn.Module):
@@ -163,21 +181,18 @@ class RNNActorCritic(nn.Module):
         obs_dim = observation_space.shape[0]
 
         if isinstance(action_space, Box):
-            self.pi = RNNGaussianActor()
+            self.pi = RNNGaussianActor(obs_dim, action_space.shape[0], hidden_size, num_layers)
         elif isinstance(action_space, Discrete):
-            self.pi = RNNCategoricalActor()
+            self.pi = RNNCategoricalActor(obs_dim, action_space.shape[0], hidden_size, num_layers)
         else:
             self.pi = None
 
-        self.v = RNNCritic()
+        self.v = RNNCritic(obs_dim, hidden_size, num_layers)
 
     def step(self, obs, h_pi, h_v):
         with torch.no_grad():
             pi, new_h_pi = self.pi._distribution(obs, h_pi)
             a = pi.sample()
-            logp_a = self.pi._log_prob_from_distribution()
+            logp_a = self.pi._log_prob_from_distribution(pi, a)
             v, new_h_v = self.v(obs, h_v)
         return a.cpu().numpy(), v.cpu().numpy(), logp_a.cpu().numpy(), new_h_pi, new_h_v
-
-    def act(self, obs):
-        pass

@@ -30,8 +30,6 @@ class RunSelector:
             policy = [policy]
         assert type(policy) is list
 
-        runner = self.select_algorithm(logger, config)
-
         for p, s in itertools.product(policy, seed):
 
             # Create environment
@@ -42,7 +40,7 @@ class RunSelector:
                 env.render()
 
             pol = self.select_policy(env, p, config)
-            runner(pol, s, env)
+            self.select_algorithm(logger, config)(pol, s, env)
 
     def select_algorithm(self, logger, config=None):
 
@@ -58,6 +56,7 @@ class RunSelector:
                                                 max_ep_len=config.max_ep_len)
             else:
                 load_model_path = None if config.train_from_scratch else os.path.join('eval', config.load_model_path)
+                recurrent = True if config.policy == 'Recurrent' else False
 
                 def runner(x, y, env): ppo_train(env=env, policy=x, seed=y, steps_per_epoch=config.steps_per_epoch,
                                                  epochs=config.epochs, gamma=config.gamma, clip_ratio=config.clip_ratio,
@@ -66,7 +65,8 @@ class RunSelector:
                                                  train_v_iters=config.train_v_iters, lam=config.lam,
                                                  max_ep_len=config.max_ep_len, target_kl=config.target_kl,
                                                  save_freq=config.save_freq, logger=logger, gpu=config.gpu,
-                                                 load_model_path=load_model_path)
+                                                 load_model_path=load_model_path, recurrent=recurrent,
+                                                 hidden_size=config.recurrent_hidden_size)
 
         elif config.algorithm == 'SAC':
 
@@ -106,6 +106,6 @@ class RunSelector:
         elif p == 'Previous action':
             return PreviousActionPolicy(env.observation_space, env.action_space)
         elif p == 'Recurrent':
-            return RecurrentPolicy(env.observation_space, env.action_space)
+            return RecurrentPolicy(env.observation_space, env.action_space, hidden_size=config.recurrent_hidden_size)
         else:
             raise NotImplementedError

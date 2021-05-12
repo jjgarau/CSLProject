@@ -8,7 +8,7 @@ import models.ppo.core as core
 
 class PPOBuffer:
 
-    def __init__(self, obs_dim, act_dim, size, gamma=0.99, lam=0.95):
+    def __init__(self, obs_dim, act_dim, h_dim, size, gamma=0.99, lam=0.95):
         self.obs_buf = np.zeros(core.combined_shape(size, obs_dim), dtype=np.float32)
         self.act_buf = np.zeros(core.combined_shape(size, act_dim), dtype=np.float32)
         self.adv_buf = np.zeros(size, dtype=np.float32)
@@ -17,10 +17,17 @@ class PPOBuffer:
         self.val_buf = np.zeros(size, dtype=np.float32)
         self.logp_buf = np.zeros(size, dtype=np.float32)
         self.done_buf = np.zeros(size, dtype=np.float32)
+        if h_dim is not None:
+            self.h_pi_buf = np.zeros(core.combined_shape(size, h_dim), dtype=np.float32)
+            self.h_v_buf = np.zeros(core.combined_shape(size, h_dim), dtype=np.float32)
+            self.store_h = True
+        else:
+            self.h_pi_buf, self.h_v_buf = None, None
+            self.store_h = False
         self.gamma, self.lam = gamma, lam
         self.ptr, self.path_start_idx, self.max_size = 0, 0, size
 
-    def store(self, obs, act, rew, val, logp, done):
+    def store(self, obs, act, rew, val, logp, done, h_pi=None, h_v=None):
         assert self.ptr < self.max_size
         self.obs_buf[self.ptr] = obs
         self.act_buf[self.ptr] = act
@@ -28,6 +35,9 @@ class PPOBuffer:
         self.val_buf[self.ptr] = val
         self.logp_buf[self.ptr] = logp
         self.done_buf[self.ptr] = done
+        if self.store_h:
+            self.h_pi_buf[self.ptr] = h_pi
+            self.h_v_buf[self.ptr] = h_v
         self.ptr += 1
 
     def finish_path(self, last_val=0):
@@ -49,12 +59,15 @@ class PPOBuffer:
         self.ptr, self.path_start_idx = 0, 0
         data = dict(obs=self.obs_buf, act=self.act_buf, ret=self.ret_buf, adv=self.adv_buf, logp=self.logp_buf,
                     done=self.done_buf)
+        if self.store_h:
+            data['h_pi'] = self.h_pi_buf
+            data['h_v'] = self.h_v_buf
         return {k: torch.as_tensor(v, dtype=torch.float32) for k, v in data.items()}
 
 
 def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, clip_ratio=0.2, pi_lr=3e-4,
               vf_lr=1e-3, train_pi_iters=80, train_v_iters=80, lam=0.97, max_ep_len=1000, target_kl=0.01,
-              save_freq=10, logger=None, gpu=False, load_model_path=None):
+              save_freq=10, logger=None, gpu=False, load_model_path=None, recurrent=False, hidden_size=64):
 
     # Prepare logger for run
     logger.set_up_seed_episode_df(policy, seed)
@@ -85,15 +98,20 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
 
     # Set up experience buffer
     local_steps_per_epoch = steps_per_epoch
-    buf = PPOBuffer(obs_dim, act_dim, local_steps_per_epoch, gamma, lam)
+    h_dim = hidden_size if recurrent else None
+    buf = PPOBuffer(obs_dim, act_dim, h_dim, local_steps_per_epoch, gamma, lam)
 
     # Set up function for computing PPO policy loss
     def compute_loss_pi(data):
         obs, act, adv, logp_old = data['obs'], data['act'], data['adv'], data['logp']
         obs, act, adv, logp_old = obs.to(device), act.to(device), adv.to(device), logp_old.to(device)
+        hidden_pi = data['h_pi'].to(device) if recurrent else None
 
         # Policy loss
-        pi, logp = policy.pi(obs, act)
+        if recurrent:
+            pi, logp = policy.pi(obs, act, hidden_pi)
+        else:
+            pi, logp = policy.pi(obs, act)
         ratio = torch.exp(logp - logp_old)
         clip_adv = torch.clamp(ratio, 1 - clip_ratio, 1 + clip_ratio) * adv
         loss_pi = - (torch.min(ratio * adv, clip_adv)).mean()
@@ -111,7 +129,12 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
     def compute_loss_v(data):
         obs, ret = data['obs'], data['ret']
         obs, ret = obs.to(device), ret.to(device)
-        return ((policy.v(obs) - ret) ** 2).mean()
+        hidden_v = data['h_v'].to(device) if recurrent else None
+
+        if recurrent:
+            return ((policy.v(obs, hidden_v) - ret) ** 2).mean()
+        else:
+            return ((policy.v(obs) - ret) ** 2).mean()
 
     # Set up optimizers for policy and value function
     pi_optimizer = Adam(policy.pi_params(), lr=pi_lr)
@@ -159,7 +182,11 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
 
         for t in range(local_steps_per_epoch):
 
-            a, v, logp = policy.step(torch.as_tensor(o, dtype=torch.float32))
+            if recurrent:
+                a, v, logp, h_pi, h_v = policy.step(torch.as_tensor(o, dtype=torch.float32))
+            else:
+                a, v, logp = policy.step(torch.as_tensor(o, dtype=torch.float32))
+                h_pi, h_v = None, None
 
             if type(a) is list or type(a) is tuple:
                 a_train, a_act = a
@@ -177,8 +204,7 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
             ep_len += 1
 
             # save and log
-            buf.store(o, a_train, r_train, v, logp, d)
-            # TODO: Logger store v
+            buf.store(o, a_train, r_train, v, logp, d, h_pi, h_v)
 
             # Update obs (critical!)
             o = next_o
@@ -198,7 +224,10 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
                         logger.log(f'Warning: trajectory cut off by epoch at {ep_len} steps')
 
                 if timeout or epoch_ended:
-                    _, v, _ = policy.step(torch.as_tensor(o, dtype=torch.float32))
+                    if recurrent:
+                        _, v, _, _, _ = policy.step(torch.as_tensor(o, dtype=torch.float32))
+                    else:
+                        _, v, _ = policy.step(torch.as_tensor(o, dtype=torch.float32))
                 else:
                     v = 0
 
@@ -213,7 +242,6 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
         # Perform PPO update!
         update()
 
-    # TODO: a lot of logging happens here
     logger.save_run()
     logger.log('\n\n')
 
