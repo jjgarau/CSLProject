@@ -1,4 +1,5 @@
 import os
+import argparse
 from datetime import datetime
 import pybullet as p
 
@@ -20,6 +21,8 @@ def main():
 
 	# Load config parameters
 	config = Config()
+	if args.take_arg:
+		config.env_name = args.env_name
 
 	# Connect to PyBullet
 	p.connect(p.DIRECT)
@@ -39,4 +42,10 @@ def main():
 
 
 if __name__ == "__main__":
+
+	parser = argparse.ArgumentParser(description="Simulation parameters")
+	parser.add_argument('--take_arg', type=int, default=0)
+	parser.add_argument('--env_name', type=str, default='JerkAnt')
+	args = parser.parse_args()
+
 	main()
