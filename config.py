@@ -64,7 +64,7 @@ class Config(DefaultConfig):
         self.policy = ['Baseline', 'Moving average', 'Previous action', 'Action difference', 'Recurrent']
         self.gpu = False
         # self.penalize_jerk = True
-        self.seed = [0, 42, 100, 12313, 12423423]
-        self.epochs = 11
-        # self.save_freq = 50
+        self.seed = [10, 142, 1100, 112313, 112423423]
+        self.epochs = 201
+        self.save_freq = 50
 
