@@ -62,7 +62,6 @@ class Config(DefaultConfig):
         super().__init__()
 
         self.env_name = 'JerkAnt'
-        self.policy = 'Recurrent'
         self.policy = ['Baseline', 'Moving average', 'Previous action', 'Action difference', 'Recurrent']
         # self.penalize_jerk = True
         self.seed = [10, 142, 1100, 112313, 112423423]
