@@ -219,12 +219,12 @@ class RecurrentPolicy(Policy):
         return self.name
 
     def pi(self, obs, act, h=None):
-        h = torch.transpose(h, 0, 1)
+        h = torch.transpose(h, 0, 1).contiguous()
         obs = obs.unsqueeze(1)
         return self.ac.pi(obs, h, act)
 
     def v(self, obs, h=None):
-        h = torch.transpose(h, 0, 1)
+        h = torch.transpose(h, 0, 1).contiguous()
         obs = obs.unsqueeze(1)
         v, _ = self.ac.v(obs, h)
         return v
