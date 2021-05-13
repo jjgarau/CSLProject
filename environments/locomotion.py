@@ -96,7 +96,7 @@ class JerkHalfCheetah(JerkEnv):
 
     def __init__(self, penalize_jerk=False, jerk_weight=50):
         super().__init__(body_vel_slice=slice(3, 6), num_actions=6, penalize_jerk=penalize_jerk,
-                         jerk_weight=jerk_weight, reward_lb=-1000)
+                         jerk_weight=jerk_weight, reward_lb=-100)
         self.robot = HalfCheetahBulletEnv()
 
 
