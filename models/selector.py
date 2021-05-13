@@ -104,7 +104,7 @@ class RunSelector:
         elif p == 'Action difference':
             return ActionDifferencePolicy(env.observation_space, env.action_space)
         elif p == 'Previous action':
-            return PreviousActionPolicy(env.observation_space, env.action_space)
+            return PreviousActionPolicy(env.observation_space, env.action_space, gpu=config.gpu)
         elif p == 'Recurrent':
             return RecurrentPolicy(env.observation_space, env.action_space, hidden_size=config.recurrent_hidden_size)
         else:
