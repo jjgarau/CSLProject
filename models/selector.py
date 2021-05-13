@@ -57,6 +57,7 @@ class RunSelector:
             else:
                 load_model_path = None if config.train_from_scratch else os.path.join('eval', config.load_model_path)
                 recurrent = True if p == 'Recurrent' else False
+                h_size = (config.recurrent_layers, config.recurrent_hidden_size)
 
                 def runner(x, y, env): ppo_train(env=env, policy=x, seed=y, steps_per_epoch=config.steps_per_epoch,
                                                  epochs=config.epochs, gamma=config.gamma, clip_ratio=config.clip_ratio,
@@ -66,7 +67,7 @@ class RunSelector:
                                                  max_ep_len=config.max_ep_len, target_kl=config.target_kl,
                                                  save_freq=config.save_freq, logger=logger, gpu=config.gpu,
                                                  load_model_path=load_model_path, recurrent=recurrent,
-                                                 hidden_size=config.recurrent_hidden_size)
+                                                 hidden_size=h_size)
 
         elif config.algorithm == 'SAC':
 
@@ -106,6 +107,7 @@ class RunSelector:
         elif p == 'Previous action':
             return PreviousActionPolicy(env.observation_space, env.action_space, gpu=config.gpu)
         elif p == 'Recurrent':
-            return RecurrentPolicy(env.observation_space, env.action_space, hidden_size=config.recurrent_hidden_size)
+            return RecurrentPolicy(env.observation_space, env.action_space, hidden_size=config.recurrent_hidden_size,
+                                   num_layers=config.recurrent_layers)
         else:
             raise NotImplementedError

@@ -212,19 +212,19 @@ class RecurrentPolicy(Policy):
 
         self.num_layers = num_layers
         self.hidden_size = hidden_size
-        self.h_v = torch.zeros((1, self.num_layers, self.hidden_size), dtype=torch.float32)
-        self.h_pi = torch.zeros((1, self.num_layers, self.hidden_size), dtype=torch.float32)
+        self.h_v = torch.zeros((self.num_layers, 1, self.hidden_size), dtype=torch.float32)
+        self.h_pi = torch.zeros((self.num_layers, 1, self.hidden_size), dtype=torch.float32)
 
     def get_name(self):
         return self.name
 
     def pi(self, obs, act, h=None):
-        h = h.unsqueeze(0)
+        h = torch.transpose(h, 0, 1)
         obs = obs.unsqueeze(1)
         return self.ac.pi(obs, h, act)
 
     def v(self, obs, h=None):
-        h = h.unsqueeze(0)
+        h = torch.transpose(h, 0, 1)
         obs = obs.unsqueeze(1)
         v, _ = self.ac.v(obs, h)
         return v
@@ -239,7 +239,7 @@ class RecurrentPolicy(Policy):
         obs = obs.unsqueeze(0).unsqueeze(0)
         output = self.ac.step(obs, self.h_pi, self.h_v)
         a, v, logp_a, self.h_pi, self.h_v = output
-        return a, v, logp_a, self.h_pi.squeeze().cpu().numpy(), self.h_v.squeeze().cpu().numpy()
+        return a, v, logp_a, self.h_pi.squeeze(1).cpu().numpy(), self.h_v.squeeze(1).cpu().numpy()
 
     def get_pi(self):
         return self.ac.pi
@@ -259,5 +259,5 @@ class RecurrentPolicy(Policy):
             self.ac.eval()
 
     def new_episode(self):
-        self.h_v = torch.zeros((1, self.num_layers, self.hidden_size), dtype=torch.float32)
-        self.h_pi = torch.zeros((1, self.num_layers, self.hidden_size), dtype=torch.float32)
+        self.h_v = torch.zeros((self.num_layers, 1, self.hidden_size), dtype=torch.float32)
+        self.h_pi = torch.zeros((self.num_layers, 1, self.hidden_size), dtype=torch.float32)

@@ -18,6 +18,7 @@ class DefaultConfig:
         self.train_from_scratch = True
         self.load_model_path = 'train.pt'
         self.recurrent_hidden_size = 64
+        self.recurrent_layers = 2
 
         # Algorithm hyperparameters
         self.algorithm = 'PPO'
@@ -63,7 +64,6 @@ class Config(DefaultConfig):
         self.policy = ['Baseline', 'Moving average', 'Previous action', 'Action difference', 'Recurrent']
         self.gpu = False
         # self.penalize_jerk = True
-        # self.policy = ['Baseline', 'Moving average', 'Previous action', 'Action difference']
         self.seed = [0, 42, 100, 12313, 12423423]
         self.epochs = 11
         # self.save_freq = 50
