@@ -23,6 +23,7 @@ def main():
 	config = Config()
 	if args.take_arg:
 		config.env_name = args.env_name
+		config.gpu_id = str(args.gpu_id)
 
 	# Connect to PyBullet
 	p.connect(p.DIRECT)
@@ -46,6 +47,7 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="Simulation parameters")
 	parser.add_argument('--take_arg', type=int, default=0)
 	parser.add_argument('--env_name', type=str, default='JerkAnt')
+	parser.add_argument('--gpu_id', type=int, default=0)
 	args = parser.parse_args()
 
 	main()

@@ -15,6 +15,7 @@ class DefaultConfig:
         self.policy = 'Baseline'
         self.window_size = 10
         self.gpu = True
+        self.gpu_id = '0'
         self.train_from_scratch = True
         self.load_model_path = 'train.pt'
         self.recurrent_hidden_size = 64
@@ -62,7 +63,6 @@ class Config(DefaultConfig):
 
         self.env_name = 'JerkAnt'
         self.policy = ['Baseline', 'Moving average', 'Previous action', 'Action difference', 'Recurrent']
-        self.gpu = False
         # self.penalize_jerk = True
         self.seed = [10, 142, 1100, 112313, 112423423]
         self.epochs = 201

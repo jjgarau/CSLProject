@@ -67,7 +67,7 @@ class RunSelector:
                                                  max_ep_len=config.max_ep_len, target_kl=config.target_kl,
                                                  save_freq=config.save_freq, logger=logger, gpu=config.gpu,
                                                  load_model_path=load_model_path, recurrent=recurrent,
-                                                 hidden_size=h_size)
+                                                 hidden_size=h_size, gpu_id=config.gpu_id)
 
         elif config.algorithm == 'SAC':
 
@@ -105,7 +105,7 @@ class RunSelector:
         elif p == 'Action difference':
             return ActionDifferencePolicy(env.observation_space, env.action_space)
         elif p == 'Previous action':
-            return PreviousActionPolicy(env.observation_space, env.action_space, gpu=config.gpu)
+            return PreviousActionPolicy(env.observation_space, env.action_space, gpu=config.gpu, gpu_id=config.gpu_id)
         elif p == 'Recurrent':
             return RecurrentPolicy(env.observation_space, env.action_space, hidden_size=config.recurrent_hidden_size,
                                    num_layers=config.recurrent_layers)

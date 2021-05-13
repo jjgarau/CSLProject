@@ -132,11 +132,11 @@ class ActionDifferencePolicy(BaselinePolicy):
 
 class PreviousActionPolicy(Policy):
 
-    def __init__(self, observation_space, action_space, hidden_sizes=(64, 64), activation=nn.Tanh, gpu=True):
+    def __init__(self, observation_space, action_space, hidden_sizes=(64, 64), activation=nn.Tanh, gpu=True, gpu_id='0'):
         super().__init__()
         self.obs_dim = observation_space.shape[0]
         self.act_dim = action_space.shape[0]
-        self.device = 'cuda:0' if gpu and torch.cuda.is_available() else 'cpu'
+        self.device = 'cuda:' + gpu_id if gpu and torch.cuda.is_available() else 'cpu'
         self.name = "Previous action"
 
         if isinstance(action_space, Box):
