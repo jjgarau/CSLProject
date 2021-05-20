@@ -61,10 +61,13 @@ class Config(DefaultConfig):
     def __init__(self):
         super().__init__()
 
-        self.env_name = 'JerkAnt'
-        self.policy = ['Baseline', 'Moving average', 'Previous action', 'Action difference', 'Recurrent']
-        self.penalize_jerk = True
-        self.seed = [10, 142, 1100, 112313, 112423423]
-        self.epochs = 201
-        self.save_freq = 50
-
+        self.env_name = 'JerkHopper'
+        # self.policy = ['Baseline', 'Moving average', 'Previous action', 'Action difference', 'Recurrent']
+        # self.penalize_jerk = True
+        # self.seed = [10, 142, 1100, 112313, 112423423]
+        self.epochs = 501
+        self.save_freq = 100
+        self.eval_mode = True
+        self.render = True
+        # self.eval_model = 'baseline.pt'
+        # self.policy = 'Previous action'

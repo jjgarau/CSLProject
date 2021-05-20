@@ -145,8 +145,6 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
         data = buf.get()
 
         pi_l_old, pi_info_old = compute_loss_pi(data)
-        pi_l_old = pi_l_old.item()
-        v_l_old = compute_loss_v(data).item()
 
         # Train policy with multiple steps of gradient descent
         for i in range(train_pi_iters):
@@ -158,8 +156,6 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
             loss_pi.backward()
             pi_optimizer.step()
 
-        # TODO: Logger store
-
         # Value function learning
         for i in range(train_v_iters):
             vf_optimizer.zero_grad()
@@ -167,11 +163,7 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
             loss_v.backward()
             vf_optimizer.step()
 
-        kl, ent, cf = pi_info['kl'], pi_info_old['ent'], pi_info['cf']
-        # TODO: a lot of logging happens here
-
     # Prepare for interaction with environment
-    start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
     policy.new_episode()
 
@@ -182,12 +174,14 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
 
         for t in range(local_steps_per_epoch):
 
+            # Consider hidden state if recurrent policy
             if recurrent:
                 a, v, logp, h_pi, h_v = policy.step(torch.as_tensor(o, dtype=torch.float32))
             else:
                 a, v, logp = policy.step(torch.as_tensor(o, dtype=torch.float32))
                 h_pi, h_v = None, None
 
+            # Consider applied action and action to train on separately
             if type(a) is list or type(a) is tuple:
                 a_train, a_act = a
             else:
@@ -195,6 +189,7 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
 
             next_o, r, d, _ = env.step(a_act)
 
+            # Consider logged reward and policy reward separately
             if type(r) is list or type(r) is tuple:
                 r_log, r_train = r
             else:
@@ -239,7 +234,7 @@ def ppo_train(env, policy, seed=0, steps_per_epoch=4000, epochs=50, gamma=0.99, 
         if (epoch % save_freq == 0) or (epoch == epochs - 1):
             logger.save_model(policy.get_model(), epoch)
 
-        # Perform PPO update!
+        # Perform PPO update
         update()
 
     logger.save_run()
@@ -259,11 +254,10 @@ def ppo_eval(env, model_path, policy, seed=0, steps_per_epoch=4000, epochs=50, m
     # Prepare for interaction with the environment
     local_steps_per_epoch = steps_per_epoch
 
-    start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
     policy.new_episode()
 
-    for epoch in tqdm(range(epochs), desc="Epoch progress"):
+    for _ in tqdm(range(epochs), desc="Epoch progress"):
 
         for t in range(local_steps_per_epoch):
 
