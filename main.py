@@ -24,6 +24,7 @@ def main():
 	if args.take_arg:
 		config.env_name = args.env_name
 		config.gpu_id = str(args.gpu_id)
+		config.mask = args.mask
 
 	# Connect to PyBullet
 	p.connect(p.DIRECT)
