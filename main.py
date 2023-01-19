@@ -48,6 +48,7 @@ if __name__ == "__main__":
 	parser.add_argument('--take_arg', type=int, default=0)
 	parser.add_argument('--env_name', type=str, default='JerkAnt')
 	parser.add_argument('--gpu_id', type=int, default=0)
+	parser.add_argument('--mask', type=str, default=None)
 	args = parser.parse_args()
 
 	main()
