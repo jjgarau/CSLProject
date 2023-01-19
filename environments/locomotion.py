@@ -130,9 +130,46 @@ class MaskedAnt(JerkAnt):
                 obs[8 + 2 * i] = 0
         elif self.mask == 'joint_vel':
             for i in range(self.num_actions):
-                obs[8 + 2 * 1 + 1] = 0
+                obs[9 + 2 * i] = 0
         elif self.mask == 'contact':
             obs[24:] = 0
+        return obs
+
+    def reset(self):
+        obs = super().reset()
+        return self.tune_obs(obs)
+
+    def step(self, a):
+        obs, r, d, debug = super().step(a)
+        obs = self.tune_obs(obs)
+        return obs, r, d, debug
+
+
+class MaskedHumanoid(JerkHumanoid):
+
+    def __init__(self, mask=None):
+        super().__init__()
+        self.mask = mask
+
+    def tune_obs(self, obs):
+        if self.mask is None:
+            return obs
+        elif self.mask == 'body_pos':
+            obs[:3] = 0
+        elif self.mask == 'body_vel':
+            obs[3:6] = 0
+        elif self.mask == 'roll':
+            obs[6] = 0
+        elif self.mask == 'pitch':
+            obs[7] = 0
+        elif self.mask == 'joint_pos':
+            for i in range(self.num_actions):
+                obs[8 + 2 * i] = 0
+        elif self.mask == 'joint_vel':
+            for i in range(self.num_actions):
+                obs[9 + 2 * i] = 0
+        elif self.mask == 'contact':
+            obs[42:] = 0
         return obs
 
     def reset(self):
