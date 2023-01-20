@@ -1,7 +1,7 @@
 import gym
 
 from environments.locomotion import JerkAnt, JerkHumanoid, JerkHalfCheetah, JerkHopper
-from environments.locomotion import MaskedAnt, MaskedHumanoid
+from environments.locomotion import MaskedAnt, MaskedHumanoid, MaskedHopper
 
 
 def make_env(config):
@@ -18,6 +18,8 @@ def make_env(config):
         env = MaskedAnt(mask=config.mask)
     elif config.env_name == 'MaskedHumanoid':
         env = MaskedHumanoid(mask=config.mask)
+    elif config.env_name == 'MaskedHopper':
+        env = MaskedHopper(mask=config.mask)
     else:
         try:
             env = gym.make(config.env_name)
